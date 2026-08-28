@@ -145,7 +145,6 @@
   </div>
 
   <div class="card-input">
-    <!-- Gemini API 키 입력 및 저장 -->
     <div class="key-config">
       <input type="password" id="apiKeyInput" placeholder="Gemini API 키를 입력하세요">
       <button onclick="saveApiKey()">키 저장</button>
@@ -163,7 +162,7 @@
 
 <script>
   // 🔑 1. 구글 Apps Script 웹 앱 URL을 여기에 붙여넣으세요.
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwlAsznOpGneKl_YJbcej9A_V_KPYH4G7KNkGZxl4EQv_uv5F20BrxTD06yoVlfm6MUzQ/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyyan9ewTiwKTJGwlaVrSupg5fU8wW0xycp-eeyrNGyMzv8v3-1l0nKMn-FL9IgtEbk2A/exec';
 
   const PRONUNCIATION_DICTIONARY = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
@@ -172,9 +171,9 @@
     'ウクレレを弾': 'ウクレレをひ', 'ベースを弾': 'ベースをひ', '道に': 'みちに'
   };
 
+  let audioList = [];
   let currentIndex = -1;
 
-  // API 키 로컬 스토리지 관리
   function getApiKey() {
     return localStorage.getItem('GEMINI_API_KEY') || '';
   }
@@ -189,7 +188,7 @@
     alert("API 키가 브라우저에 안전하게 저장되었습니다.");
   }
 
-  // 💡 앱 실행 시 구글 시트 B열 데이터 자동으로 불러오기
+  // 앱 실행 시 구글 시트 B열 데이터 자동 불러오기
   window.addEventListener('DOMContentLoaded', async () => {
     const savedKey = getApiKey();
     if (savedKey) {
@@ -259,6 +258,27 @@
       }
     }
     return { error: { message: lastErrorMessage } };
+  }
+
+  // 🔊 구글 앱스 스크립트(GAS)를 프록시로 통해 구글 번역 TTS 음성 받아오기
+  async function fetchGoogleTtsBase64(text) {
+    if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) return "";
+
+    let cleanText = text.replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").replace(/<[^>]*>/g, "").trim();
+    for (const word in PRONUNCIATION_DICTIONARY) {
+      if (PRONUNCIATION_DICTIONARY.hasOwnProperty(word)) {
+        cleanText = cleanText.replace(new RegExp(word, 'g'), PRONUNCIATION_DICTIONARY[word]);
+      }
+    }
+
+    try {
+      const res = await fetch(`${GAS_WEB_APP_URL}?tts=${encodeURIComponent(cleanText)}`);
+      const data = await res.json();
+      return data.audio64 || "";
+    } catch (e) {
+      console.error("구글 TTS 불러오기 실패:", e);
+      return "";
+    }
   }
 
   // 후리가나 변환
@@ -374,9 +394,12 @@
           const furiganaSentence = lines[i+1] ? lines[i+1].trim() : japaneseSentence;
           const koreanSentence = lines[i+2] ? lines[i+2].trim() : "";
           const targetWord = lines[i+3] ? lines[i+3].trim() : "";
+
+          // 구글 TTS 오디오 가져오기
+          const audio64 = await fetchGoogleTtsBase64(japaneseSentence);
           const rubyHtml = convertToInteractiveRuby(japaneseSentence, furiganaSentence);
 
-          examples.push({ japanese: japaneseSentence, rubyHtml, korean: koreanSentence, targetWord });
+          examples.push({ japanese: japaneseSentence, rubyHtml, korean: koreanSentence, targetWord, audio64 });
         }
       }
     } catch (e) {
@@ -390,6 +413,7 @@
   // UI 렌더링
   function renderExamples(examples) {
     const container = document.getElementById('examplesContainer');
+    audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
     currentIndex = -1;
 
     container.innerHTML = examples.map((item, index) => `
@@ -408,7 +432,7 @@
               </div>
             ` : ''}
           </div>
-          <button class="play-btn" onclick="toggleAudio(${index}, '${item.japanese.replace(/'/g, "\\'")}')">▶️ 재생</button>
+          <button class="play-btn" onclick="toggleAudio(${index})">▶️ 재생</button>
         </div>
       </div>
     `).join('');
@@ -443,55 +467,49 @@
     }
   }
 
-  // Web Speech API
-  function toggleAudio(index, text) {
+  // 🔊 구글 TTS 오디오 재생 컨트롤
+  function toggleAudio(index) {
     const btns = document.querySelectorAll('.play-btn');
     const targetBtn = btns[index];
+    const audio = audioList[index];
 
-    if (window.speechSynthesis.speaking && currentIndex === index) {
-      window.speechSynthesis.cancel();
-      targetBtn.textContent = '▶️ 재생';
-      targetBtn.classList.remove('playing');
-      currentIndex = -1;
+    if (!audio) {
+      alert("음성 데이터를 불러오지 못했습니다. GAS 배포 상태를 확인해주세요.");
       return;
     }
 
-    window.speechSynthesis.cancel();
-    if (currentIndex !== -1 && btns[currentIndex]) {
-      btns[currentIndex].textContent = '▶️ 재생';
-      btns[currentIndex].classList.remove('playing');
+    if (currentIndex === index) {
+      if (audio.paused) {
+        audio.play();
+        targetBtn.textContent = '⏸️ 정지';
+        targetBtn.classList.add('playing');
+      } else {
+        audio.pause();
+        targetBtn.textContent = '▶️ 재생';
+        targetBtn.classList.remove('playing');
+      }
+      return;
     }
 
-    let cleanText = text.replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").replace(/<[^>]*>/g, "").trim();
-    for (const word in PRONUNCIATION_DICTIONARY) {
-      if (PRONUNCIATION_DICTIONARY.hasOwnProperty(word)) {
-        cleanText = cleanText.replace(new RegExp(word, 'g'), PRONUNCIATION_DICTIONARY[word]);
+    if (currentIndex !== -1 && audioList[currentIndex]) {
+      audioList[currentIndex].pause();
+      audioList[currentIndex].currentTime = 0;
+      if (btns[currentIndex]) {
+        btns[currentIndex].textContent = '▶️ 재생';
+        btns[currentIndex].classList.remove('playing');
       }
     }
 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'ja-JP';
-    utterance.rate = 0.9;
+    currentIndex = index;
+    audio.currentTime = 0;
+    audio.play();
+    targetBtn.textContent = '⏸️ 정지';
+    targetBtn.classList.add('playing');
 
-    utterance.onstart = () => {
-      currentIndex = index;
-      targetBtn.textContent = '⏸️ 정지';
-      targetBtn.classList.add('playing');
-    };
-
-    utterance.onend = () => {
+    audio.onended = function() {
       targetBtn.textContent = '▶️ 재생';
       targetBtn.classList.remove('playing');
-      currentIndex = -1;
     };
-
-    utterance.onerror = () => {
-      targetBtn.textContent = '▶️ 재생';
-      targetBtn.classList.remove('playing');
-      currentIndex = -1;
-    };
-
-    window.speechSynthesis.speak(utterance);
   }
 </script>
 </body>
