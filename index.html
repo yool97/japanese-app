@@ -552,7 +552,7 @@
   /* 첫 번째 코드의 HTML 구조 적용 (sentence-body span 및 숨김 방식) */
   function renderExamples(examples) {
     const container = document.getElementById('examplesContainer');
-    audioList = examples.map(item => item.audio64 ? new Audio(`data:audio/mpeg;base64,${item.audio64}`) : null);
+    audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
     currentIndex = -1;
 
     container.innerHTML = examples.map((item, index) => `
