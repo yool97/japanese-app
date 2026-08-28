@@ -97,10 +97,8 @@
       font-weight: bold;
       cursor: pointer;
     }
-    /* 버튼 비활성화(회색) 공통 처리 */
     button.main-btn:disabled { 
       background-color: #bdc1c6 !important; 
-      color: #ffffff !important;
       cursor: not-allowed; 
     }
 
@@ -113,37 +111,40 @@
       margin-bottom: 10px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
-    .sentence-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .sentence-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
     .text-content { flex: 1; min-width: 0; }
     
-    /* 일본어 문장 영역: 높이 고정 및 줄간격 최소화 */
+    /* 박스 높이 변경 방지 및 line-height/여백 조정 */
     .japanese { 
       font-size: 18px; 
       color: #000000; 
       line-height: 1.4; 
-      margin-bottom: 2px; 
-      min-height: 38px; /* 숨김/보임 시 박스 높이 고정 */
+      margin-bottom: 4px; 
+      min-height: 2.2em; /* 문장 토글 시 박스 높이 고정 */
       display: flex;
       align-items: center;
       flex-wrap: wrap;
     }
-    .number-btn { cursor: pointer; font-weight: bold; color: #1a73e8; margin-right: 6px; }
     
-    /* 후리가나 여백 줄이기 및 표준 배치 적용 */
+    .number-btn { cursor: pointer; font-weight: bold; color: #1a73e8; margin-right: 6px; }
+
+    /* 후리가나 고정 및 자간 벌어짐 방지 */
     ruby.interactive-ruby { 
       cursor: pointer; 
       display: inline-ruby;
-      margin-top: 2px;
+      ruby-align: center;
+      margin: 0 1px;
     }
+    
     rt.ruby-text {
-      font-size: 11px;
+      font-size: 10px;
       color: #1a73e8;
-      white-space: nowrap;
       ruby-position: over;
       -webkit-ruby-position: over;
       line-height: 1;
-      margin-bottom: -1px; /* 한자와 후리가나 사이 간격 축소 */
+      margin-bottom: 1px; /* 후리가나와 한자 사이의 간격 */
     }
+    
     rt.hidden-rt { display: none; }
 
     .korean-container { margin-top: 6px; display: flex; align-items: center; gap: 6px; }
@@ -168,6 +169,7 @@
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      margin-top: 2px;
     }
     .play-btn.playing { background-color: #fce8e6; color: #d93025; }
     .model-badge {
@@ -214,9 +216,9 @@
 
   const PRONUNCIATION_DICTIONARY = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
-    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギター를弾': 'ギターをひ',
-    'バイオリンを弾': 'バイオリンをひ', 'チェロを弾': 'チェロをひ', 'ハープを弾': 'ハープをひ',
-    'ウクレレを弾': 'ウクレレをひ', 'ベースを弾': 'ベースをひ', '道に': 'みちに'
+    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギターを弾': 'ギターをひ',
+    '바이올린을弾': '바이올린을ひ', '체로を弾': '체로をひ', '하프を弾': '하프をひ',
+    '우클렐레を弾': '우클렐레をひ', '베이스を弾': '베이스をひ', '道に': 'みちに'
   };
 
   let audioList = [];
@@ -364,8 +366,8 @@
     const words = rawInput.split('\n').map(w => w.trim()).filter(w => w !== "");
     const btn1 = document.getElementById('btnSingle');
     const btn2 = document.getElementById('btnRandom');
-    
-    // 생성 중 두 버튼 모두 비활성화
+
+    // 두 버튼 모두 회색(disabled) 처리
     btn1.disabled = true; 
     btn2.disabled = true;
 
@@ -462,7 +464,7 @@
     } catch (e) {
       alert(`파싱 오류: ${e.toString()}`);
     } finally {
-      // API 통신 종료 후 두 버튼 복구
+      // API 응답 완료 후 두 버튼 모두 활성화 복구
       btn1.disabled = false; 
       btn2.disabled = false;
     }
