@@ -97,7 +97,12 @@
       font-weight: bold;
       cursor: pointer;
     }
-    button.main-btn:disabled { background-color: #bdc1c6; cursor: not-allowed; }
+    /* 버튼 비활성화(회색) 공통 처리 */
+    button.main-btn:disabled { 
+      background-color: #bdc1c6 !important; 
+      color: #ffffff !important;
+      cursor: not-allowed; 
+    }
 
     .card {
       background: #ffffff;
@@ -110,22 +115,37 @@
     }
     .sentence-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .text-content { flex: 1; min-width: 0; }
-    .japanese { font-size: 18px; color: #000000; line-height: 1.8; margin-bottom: 4px; }
+    
+    /* 일본어 문장 영역: 높이 고정 및 줄간격 최소화 */
+    .japanese { 
+      font-size: 18px; 
+      color: #000000; 
+      line-height: 1.4; 
+      margin-bottom: 2px; 
+      min-height: 38px; /* 숨김/보임 시 박스 높이 고정 */
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+    }
     .number-btn { cursor: pointer; font-weight: bold; color: #1a73e8; margin-right: 6px; }
+    
+    /* 후리가나 여백 줄이기 및 표준 배치 적용 */
     ruby.interactive-ruby { 
       cursor: pointer; 
-      display: inline-ruby; 
+      display: inline-ruby;
+      margin-top: 2px;
     }
     rt.ruby-text {
       font-size: 11px;
       color: #1a73e8;
       white-space: nowrap;
-      ruby-position: over; /* 한자 위쪽에 배치 명시 */
-      -webkit-ruby-position: over; /* iOS 사파리 지원 */
+      ruby-position: over;
+      -webkit-ruby-position: over;
+      line-height: 1;
+      margin-bottom: -1px; /* 한자와 후리가나 사이 간격 축소 */
     }
-    rt.hidden-rt { 
-  visibility: hidden; /* display: none 대신 공간을 유지하거나 안 보이게 처리 */
-}
+    rt.hidden-rt { display: none; }
+
     .korean-container { margin-top: 6px; display: flex; align-items: center; gap: 6px; }
     .korean-text { font-size: 14px; color: #3c4043; }
     .word-badge { font-size: 13px; color: #d93025; font-weight: bold; }
@@ -181,8 +201,8 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 (5개)</button>
-      <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 첫 단어 예문 생성 (5개)</button>
+      <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
 
@@ -190,12 +210,11 @@
 </div>
 
 <script>
-  // 🔑 1. 구글 Apps Script 웹 앱 URL을 여기에 붙여넣으세요.
   const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyyan9ewTiwKTJGwlaVrSupg5fU8wW0xycp-eeyrNGyMzv8v3-1l0nKMn-FL9IgtEbk2A/exec';
 
   const PRONUNCIATION_DICTIONARY = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
-    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギターを弾': 'ギターをひ',
+    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギター를弾': 'ギターをひ',
     'バイオリンを弾': 'バイオリンをひ', 'チェロを弾': 'チェロをひ', 'ハープを弾': 'ハープをひ',
     'ウクレレを弾': 'ウクレレをひ', 'ベースを弾': 'ベースをひ', '道に': 'みちに'
   };
@@ -217,7 +236,6 @@
     alert("API 키가 브라우저에 안전하게 저장되었습니다.");
   }
 
-  // 구글 시트 B열 데이터 불러오는 전용 함수
   async function fetchSheetWords() {
     const inputArea = document.getElementById('inputText');
     const reloadBtn = document.getElementById('btnReload');
@@ -232,7 +250,6 @@
     reloadBtn.innerText = "🔄 불러오는 중...";
 
     try {
-      // 캐시 방지를 위한 타임스탬프 추가
       const response = await fetch(`${GAS_WEB_APP_URL}?t=${new Date().getTime()}`);
       const data = await response.json();
 
@@ -243,14 +260,13 @@
       }
     } catch (e) {
       console.error("스프레드시트 연동 오류:", e);
-      alert("스프레드시트에서 단어를 불러오지 못했습니다. URL 및 앱스 스크립트 배포 상태를 확인해주세요.");
+      alert("스프레드시트에서 단어를 불러오지 못했습니다.");
     } finally {
       reloadBtn.disabled = false;
       reloadBtn.innerText = "🔄 시트 단어 불러오기";
     }
   }
 
-  // 앱 처음 접속 시 자동 실행
   window.addEventListener('DOMContentLoaded', () => {
     const savedKey = getApiKey();
     if (savedKey) {
@@ -259,7 +275,6 @@
     fetchSheetWords();
   });
 
-  // Gemini API 호출
   async function callGeminiAPI(prompt, temperature = 0.85) {
     const apiKey = getApiKey();
     if (!apiKey) {
@@ -302,7 +317,6 @@
     return { error: { message: lastErrorMessage } };
   }
 
-  // 🔊 구글 번역 TTS 음성 받아오기 (GAS 프록시 방식)
   async function fetchGoogleTtsBase64(text) {
     if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) return "";
 
@@ -323,7 +337,6 @@
     }
   }
 
-  // 후리가나 변환
   function convertToInteractiveRuby(kanjiText, furiganaText) {
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
@@ -341,7 +354,6 @@
     return targetText;
   }
 
-  // 예문 생성 로직
   async function processWords(isRandomMode) {
     const rawInput = document.getElementById('inputText').value.trim();
     if (!rawInput) {
@@ -352,7 +364,10 @@
     const words = rawInput.split('\n').map(w => w.trim()).filter(w => w !== "");
     const btn1 = document.getElementById('btnSingle');
     const btn2 = document.getElementById('btnRandom');
-    btn1.disabled = true; btn2.disabled = true;
+    
+    // 생성 중 두 버튼 모두 비활성화
+    btn1.disabled = true; 
+    btn2.disabled = true;
 
     let prompt = "";
     let totalSentences = 0;
@@ -413,20 +428,19 @@
 ... (총 ${totalSentences}세트)`;
     }
 
-    const json = await callGeminiAPI(prompt, 0.85);
-    btn1.disabled = false; btn2.disabled = false;
-
-    if (json.error) {
-      if (json.error.message !== "API 키 없음") alert(`⚠️ API 오류 발생:\n${json.error.message}`);
-      return;
-    }
-
-    const badge = document.getElementById('modelBadge');
-    badge.innerText = `Gemini ${json.usedModel}`;
-    badge.style.display = 'inline-block';
-
-    let examples = [];
     try {
+      const json = await callGeminiAPI(prompt, 0.85);
+
+      if (json.error) {
+        if (json.error.message !== "API 키 없음") alert(`⚠️ API 오류 발생:\n${json.error.message}`);
+        return;
+      }
+
+      const badge = document.getElementById('modelBadge');
+      badge.innerText = `Gemini ${json.usedModel}`;
+      badge.style.display = 'inline-block';
+
+      let examples = [];
       const text = json.candidates[0].content.parts[0].text.trim();
       const lines = text.split('\n').map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(l => l !== "");
 
@@ -437,22 +451,23 @@
           const koreanSentence = lines[i+2] ? lines[i+2].trim() : "";
           const targetWord = lines[i+3] ? lines[i+3].trim() : "";
 
-          // 구글 TTS 오디오 가져오기
           const audio64 = await fetchGoogleTtsBase64(japaneseSentence);
           const rubyHtml = convertToInteractiveRuby(japaneseSentence, furiganaSentence);
 
           examples.push({ japanese: japaneseSentence, rubyHtml, korean: koreanSentence, targetWord, audio64 });
         }
       }
+
+      renderExamples(examples);
     } catch (e) {
       alert(`파싱 오류: ${e.toString()}`);
-      return;
+    } finally {
+      // API 통신 종료 후 두 버튼 복구
+      btn1.disabled = false; 
+      btn2.disabled = false;
     }
-
-    renderExamples(examples);
   }
 
-  // UI 렌더링
   function renderExamples(examples) {
     const container = document.getElementById('examplesContainer');
     audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
@@ -509,7 +524,6 @@
     }
   }
 
-  // 🔊 오디오 재생
   function toggleAudio(index) {
     const btns = document.querySelectorAll('.play-btn');
     const targetBtn = btns[index];
