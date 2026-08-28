@@ -212,13 +212,14 @@
 </div>
 
 <script>
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyyan9ewTiwKTJGwlaVrSupg5fU8wW0xycp-eeyrNGyMzv8v3-1l0nKMn-FL9IgtEbk2A/exec';
+  // 업데이트된 Google Apps Script Web App URL
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyKHSxogJeVH0xu2sML3-3sSw3xpU_iCXJWJuVx_OJJQzBNEWQivsG81Q3PJEgsZJL8ow/exec';
 
-  const PRONUNCIATION_DICTIONARY = {
+  // 시트에서 동적으로 로드될 발음 사전 (시트 로드 전 예비 데이터 포함)
+  let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
     '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギターを弾': 'ギターをひ',
-    'バイオリンを弾': 'バイオリンをひ', 'チェロを弾': 'チェロをひ', 'ハープを弾': 'ハープをひ',
-    'ウクレレを弾': 'ウクレレをひ', 'ベースを弾': 'ベースをひ', '道に': 'みちに', '等': 'など'
+    '道に': 'みちに', '等': 'など'
   };
 
   let audioList = [];
@@ -255,14 +256,21 @@
       const response = await fetch(`${GAS_WEB_APP_URL}?t=${new Date().getTime()}`);
       const data = await response.json();
 
+      // 단어 목록 업데이트
       if (data.words && data.words.length > 0) {
         inputArea.value = data.words.join('\n');
       } else {
-        alert("스프레드시트 B열에 단어가 없습니다.");
+        alert("스프레드시트에 단어가 없습니다.");
+      }
+
+      // 시트 기반 동적 사전 업데이트
+      if (data.dictionary && typeof data.dictionary === 'object') {
+        dynamicDictionary = data.dictionary;
+        console.log("시트 동적 사전 불러오기 성공:", dynamicDictionary);
       }
     } catch (e) {
       console.error("스프레드시트 연동 오류:", e);
-      alert("스프레드시트에서 단어를 불러오지 못했습니다.");
+      alert("스프레드시트에서 데이터를 불러오지 못했습니다.");
     } finally {
       reloadBtn.disabled = false;
       reloadBtn.innerText = "🔄 시트 단어 불러오기";
@@ -323,9 +331,11 @@
     if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) return "";
 
     let cleanText = text.replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").replace(/<[^>]*>/g, "").trim();
-    for (const word in PRONUNCIATION_DICTIONARY) {
-      if (PRONUNCIATION_DICTIONARY.hasOwnProperty(word)) {
-        cleanText = cleanText.replace(new RegExp(word, 'g'), PRONUNCIATION_DICTIONARY[word]);
+    
+    // 시트 기반 동적 사전을 적용하여 TTS 읽기용 텍스트 보정
+    for (const word in dynamicDictionary) {
+      if (Object.prototype.hasOwnProperty.call(dynamicDictionary, word)) {
+        cleanText = cleanText.replace(new RegExp(word, 'g'), dynamicDictionary[word]);
       }
     }
 
