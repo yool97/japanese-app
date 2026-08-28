@@ -114,12 +114,13 @@
     .sentence-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
     .text-content { flex: 1; min-width: 0; }
     
-    /* 박스 높이 고정 및 여백 최적화 */
+    /* 박스 높이 고정 및 후리가나 상단 영역 사전 확보 */
     .japanese { 
       font-size: 18px; 
       color: #000000; 
       line-height: 1.4; 
       margin-bottom: 4px; 
+      margin-top: 12px; /* 후리가나 공간을 미리 확보하여 문장 밀림 방지 */
       min-height: 2.2em;
       display: flex;
       align-items: center;
@@ -142,10 +143,15 @@
       ruby-position: over;
       -webkit-ruby-position: over;
       line-height: 1;
-      margin-bottom: -6px; /* 후리가나 아래쪽 간격 */
+      visibility: visible;
+      /* 👇 간격 조절 방법 (하나만 선택해서 사용하세요) */
+      margin-bottom: -2px; /* 음수 값을 크게 할수록 한자에 가까워집니다. */
     }
     
-    rt.hidden-rt { display: none; }
+    /* display: none 대신 visibility: hidden을 사용하여 레이아웃 공간을 고정 유지 */
+    rt.hidden-rt { 
+      visibility: hidden; 
+    }
 
     .korean-container { margin-top: 6px; display: flex; align-items: center; gap: 6px; }
     .korean-text { font-size: 14px; color: #3c4043; }
@@ -282,7 +288,7 @@
     if (savedKey) {
       document.getElementById('apiKeyInput').value = savedKey;
     }
-  //  fetchSheetWords(); '🔄 시트 단어 불러오기' 버튼을 눌러야만 실행. 자동으로 불러오려면 주석처리 삭제.
+    // fetchSheetWords(); '🔄 시트 단어 불러오기' 버튼을 눌러야만 실행됩니다.
   });
 
   async function callGeminiAPI(prompt, temperature = 0.85) {
