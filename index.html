@@ -282,7 +282,7 @@
     if (savedKey) {
       document.getElementById('apiKeyInput').value = savedKey;
     }
-    fetchSheetWords();
+  //  fetchSheetWords(); '🔄 시트 단어 불러오기' 버튼을 눌러야만 실행. 자동으로 불러오려면 주석처리 삭제.
   });
 
   async function callGeminiAPI(prompt, temperature = 0.85) {
