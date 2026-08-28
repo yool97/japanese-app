@@ -112,18 +112,20 @@
     .text-content { flex: 1; min-width: 0; }
     .japanese { font-size: 18px; color: #000000; line-height: 1.8; margin-bottom: 4px; }
     .number-btn { cursor: pointer; font-weight: bold; color: #1a73e8; margin-right: 6px; }
-    ruby.interactive-ruby { cursor: pointer; position: relative; display: inline-block; }
+    ruby.interactive-ruby { 
+      cursor: pointer; 
+      display: inline-ruby; 
+    }
     rt.ruby-text {
-      position: absolute;
-      top: -0.85em;
-      left: 50%;
-      transform: translateX(-50%);
       font-size: 11px;
       color: #1a73e8;
       white-space: nowrap;
-      pointer-events: none;
+      ruby-position: over; /* 한자 위쪽에 배치 명시 */
+      -webkit-ruby-position: over; /* iOS 사파리 지원 */
     }
-    rt.hidden-rt { display: none; }
+    rt.hidden-rt { 
+  visibility: hidden; /* display: none 대신 공간을 유지하거나 안 보이게 처리 */
+}
     .korean-container { margin-top: 6px; display: flex; align-items: center; gap: 6px; }
     .korean-text { font-size: 14px; color: #3c4043; }
     .word-badge { font-size: 13px; color: #d93025; font-weight: bold; }
