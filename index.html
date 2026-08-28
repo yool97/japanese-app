@@ -114,13 +114,13 @@
     .sentence-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
     .text-content { flex: 1; min-width: 0; }
     
-    /* 박스 높이 변경 방지 및 line-height/여백 조정 */
+    /* 박스 높이 고정 및 여백 최적화 */
     .japanese { 
       font-size: 18px; 
       color: #000000; 
       line-height: 1.4; 
       margin-bottom: 4px; 
-      min-height: 2.2em; /* 문장 토글 시 박스 높이 고정 */
+      min-height: 2.2em;
       display: flex;
       align-items: center;
       flex-wrap: wrap;
@@ -128,7 +128,7 @@
     
     .number-btn { cursor: pointer; font-weight: bold; color: #1a73e8; margin-right: 6px; }
 
-    /* 후리가나 고정 및 자간 벌어짐 방지 */
+    /* iOS 사파리 대응 표준 루비 스타일 및 자간 유지 */
     ruby.interactive-ruby { 
       cursor: pointer; 
       display: inline-ruby;
@@ -142,7 +142,7 @@
       ruby-position: over;
       -webkit-ruby-position: over;
       line-height: 1;
-      margin-bottom: 1px; /* 후리가나와 한자 사이의 간격 */
+      margin-bottom: 1px;
     }
     
     rt.hidden-rt { display: none; }
@@ -217,8 +217,8 @@
   const PRONUNCIATION_DICTIONARY = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
     '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギターを弾': 'ギターをひ',
-    '바이올린을弾': '바이올린을ひ', '체로を弾': '체로をひ', '하프を弾': '하프をひ',
-    '우클렐레を弾': '우클렐레をひ', '베이스を弾': '베이스をひ', '道に': 'みちに'
+    'バイオリンを弾': 'バイオリンをひ', 'チェロを弾': 'チェロをひ', 'ハープを弾': 'ハープをひ',
+    'ウクレレを弾': 'ウクレレをひ', 'ベースを弾': 'ベースをひ', '道に': 'みちに'
   };
 
   let audioList = [];
@@ -367,7 +367,6 @@
     const btn1 = document.getElementById('btnSingle');
     const btn2 = document.getElementById('btnRandom');
 
-    // 두 버튼 모두 회색(disabled) 처리
     btn1.disabled = true; 
     btn2.disabled = true;
 
@@ -442,29 +441,41 @@
       badge.innerText = `Gemini ${json.usedModel}`;
       badge.style.display = 'inline-block';
 
-      let examples = [];
       const text = json.candidates[0].content.parts[0].text.trim();
       const lines = text.split('\n').map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(l => l !== "");
 
+      const rawExamples = [];
       for (let i = 0; i < lines.length; i += 4) {
         if (lines[i]) {
-          const japaneseSentence = lines[i].trim();
-          const furiganaSentence = lines[i+1] ? lines[i+1].trim() : japaneseSentence;
-          const koreanSentence = lines[i+2] ? lines[i+2].trim() : "";
-          const targetWord = lines[i+3] ? lines[i+3].trim() : "";
-
-          const audio64 = await fetchGoogleTtsBase64(japaneseSentence);
-          const rubyHtml = convertToInteractiveRuby(japaneseSentence, furiganaSentence);
-
-          examples.push({ japanese: japaneseSentence, rubyHtml, korean: koreanSentence, targetWord, audio64 });
+          rawExamples.push({
+            japanese: lines[i].trim(),
+            furigana: lines[i+1] ? lines[i+1].trim() : lines[i].trim(),
+            korean: lines[i+2] ? lines[i+2].trim() : "",
+            targetWord: lines[i+3] ? lines[i+3].trim() : ""
+          });
         }
       }
 
+      // 오디오 및 루비 태그 변환을 병렬로 동시 처리
+      const examples = await Promise.all(rawExamples.map(async (item) => {
+        const audio64 = await fetchGoogleTtsBase64(item.japanese);
+        const rubyHtml = convertToInteractiveRuby(item.japanese, item.furigana);
+        return {
+          japanese: item.japanese,
+          rubyHtml,
+          korean: item.korean,
+          targetWord: item.targetWord,
+          audio64
+        };
+      }));
+
+      // 화면에 문장이 표시될 때까지 렌더링 완료 보장
       renderExamples(examples);
+
     } catch (e) {
       alert(`파싱 오류: ${e.toString()}`);
     } finally {
-      // API 응답 완료 후 두 버튼 모두 활성화 복구
+      // 화면 표시 및 모든 처리가 완료된 후 두 버튼 활성화
       btn1.disabled = false; 
       btn2.disabled = false;
     }
