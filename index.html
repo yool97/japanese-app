@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>일본어 예문 & 음성 학습기</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      background-color: #f8f9fa;
+      font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #202124;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    .header {
+      font-size: 20px;
+      font-weight: bold;
+      color: #1a73e8;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-input {
+      background: #ffffff;
+      border: 1px solid #dadce0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .key-config {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .key-config input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .key-config button {
+      background-color: #5f6368;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 10px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      font-size: 15px;
+      resize: vertical;
+      margin-bottom: 12px;
+    }
+    .btn-group { display: flex; gap: 10px; }
+    button.main-btn {
+      flex: 1;
+      background-color: #1a73e8;
+      color: #ffffff;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button.main-btn:disabled { background-color: #bdc1c6; cursor: not-allowed; }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #dadce0;
+      border-left: 4px solid #1a73e8;
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .sentence-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .text-content { flex: 1; min-width: 0; }
+    .japanese { font-size: 18px; color: #000000; line-height: 1.8; margin-bottom: 4px; }
+    .number-btn { cursor: pointer; font-weight: bold; color: #1a73e8; margin-right: 6px; }
+    ruby.interactive-ruby { cursor: pointer; position: relative; display: inline-block; }
+    rt.ruby-text {
+      position: absolute;
+      top: -0.85em;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: #1a73e8;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    rt.hidden-rt { display: none; }
+    .korean-container { margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+    .korean-text { font-size: 14px; color: #3c4043; }
+    .word-badge { font-size: 13px; color: #d93025; font-weight: bold; }
+    .hidden-content { display: none !important; }
+    .toggle-btn {
+      border: 1px solid #dadce0;
+      background-color: #f1f3f4;
+      color: #3c4043;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .play-btn {
+      border: none;
+      background-color: #e8f0fe;
+      color: #1a73e8;
+      padding: 8px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .play-btn.playing { background-color: #fce8e6; color: #d93025; }
+    .model-badge {
+      background-color: #e8f0fe;
+      color: #1a73e8;
+      border: 1px solid #aecbfa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <span>🇯🇵 일본어 예문 & 음성 학습기</span>
+    <span id="modelBadge" class="model-badge" style="display:none;"></span>
+  </div>
+
+  <div class="card-input">
+    <!-- API 키 안전 저장 입력창 -->
+    <div class="key-config">
+      <input type="password" id="apiKeyInput" placeholder="Gemini API 키를 입력하세요">
+      <button onclick="saveApiKey()">키 저장</button>
+    </div>
+
+    <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
+    <div class="btn-group">
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 첫 단어 예문 생성 (5개)</button>
+      <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
+    </div>
+  </div>
+
+  <div id="examplesContainer"></div>
+</div>
+
+<script>
+  // 🔑 구글 Apps Script 웹 앱 URL을 붙여넣으세요.
+  const GAS_WEB_APP_URL = '여기에_복사한_웹_앱_URL을_붙여넣으세요';
+
+  const PRONUNCIATION_DICTIONARY = {
+    '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
+    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギターを弾': 'ギターをひ',
+    'バイオリンを弾': 'バイオリンをひ', 'チェロを弾': 'チェロをひ', 'ハープを弾': 'ハープをひ',
+    'ウクレレを弾': 'ウクレレをひ', 'ベースを弾': 'ベースをひ', '道に': 'みちに'
+  };
+
+  let currentIndex = -1;
+
+  // 저장된 API 키 불러오기
+  function getApiKey() {
+    return localStorage.getItem('GEMINI_API_KEY') || '';
+  }
+
+  function saveApiKey() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    if (!key) {
+      alert("API 키를 입력해주세요.");
+      return;
+    }
+    localStorage.setItem('GEMINI_API_KEY', key);
+    alert("API 키가 브라우저에 안전하게 저장되었습니다.");
+  }
+
+  // 초기화
+  window.addEventListener('DOMContentLoaded', async () => {
+    const savedKey = getApiKey();
+    if (savedKey) {
+      document.getElementById('apiKeyInput').value = savedKey;
+    }
+
+    const inputArea = document.getElementById('inputText');
+    if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) {
+      inputArea.placeholder = "단어를 입력해주세요. (줄바꿈으로 구별)";
+      return;
+    }
+
+    try {
+      const response = await fetch(GAS_WEB_APP_URL);
+      const data = await response.json();
+      if (data.words && data.words.length > 0) {
+        inputArea.value = data.words.join('\n');
+      } else {
+        inputArea.placeholder = "스프레드시트 B열에 단어가 없습니다.";
+      }
+    } catch (e) {
+      inputArea.placeholder = "스프레드시트에서 단어를 불러오지 못했습니다. 직접 입력해 주세요.";
+    }
+  });
+
+  // Gemini API 호출
+  async function callGeminiAPI(prompt, temperature = 0.85) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      alert("상단에 Gemini API 키를 먼저 입력하고 [키 저장]을 눌러주세요.");
+      return { error: { message: "API 키 없음" } };
+    }
+
+    const models = [
+      { name: 'gemini-3.7-flash', label: '3.7' },
+      { name: 'gemini-3.6-flash', label: '3.6' }
+    ];
+    let lastErrorMessage = "";
+
+    for (const item of models) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${item.name}:generateContent?key=${apiKey}`;
+      const payload = {
+        "contents": [{ "parts": [{ "text": prompt }] }],
+        "generationConfig": { "temperature": temperature }
+      };
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const json = await res.json();
+          if (!json.error) {
+            json.usedModel = item.label;
+            return json;
+          }
+          lastErrorMessage = `[${item.name}] ${json.error.message || "API 오류"}`;
+        } catch (e) {
+          lastErrorMessage = `[${item.name}] 네트워크 오류: ${e.toString()}`;
+        }
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+    return { error: { message: lastErrorMessage } };
+  }
+
+  // 후리가나 변환
+  function convertToInteractiveRuby(kanjiText, furiganaText) {
+    let targetText = furiganaText || kanjiText;
+    if (!targetText) return "";
+    targetText = targetText.replace(/<\/?u>/gi, "").replace(/<\/?b>/gi, "").replace(/\[\[|\]\]/g, "");
+
+    if (targetText.includes('](')) {
+      targetText = targetText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, k, f) => 
+        `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rb>${k}</rb><rt class="ruby-text hidden-rt">${f}</rt></ruby>`
+      );
+    }
+    targetText = targetText.replace(/([一-龠a-zA-Z0-9]+|\[[一-龠a-zA-Z0-9]+\])\[([^\]]+)\]/g, (m, k, f) => {
+      const cleanK = k.replace(/[\[\]]/g, '');
+      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rb>${cleanK}</rb><rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
+    });
+    return targetText;
+  }
+
+  // 예문 생성
+  async function processWords(isRandomMode) {
+    const rawInput = document.getElementById('inputText').value.trim();
+    if (!rawInput) {
+      alert("단어를 입력하거나 불러온 후 실행해 주세요.");
+      return;
+    }
+
+    const words = rawInput.split('\n').map(w => w.trim()).filter(w => w !== "");
+    const btn1 = document.getElementById('btnSingle');
+    const btn2 = document.getElementById('btnRandom');
+    btn1.disabled = true; btn2.disabled = true;
+
+    let prompt = "";
+    let totalSentences = 0;
+
+    if (!isRandomMode) {
+      const targetWord = words[0];
+      totalSentences = 5;
+      prompt = `단어 '${targetWord}'를 활용하여 자연스럽고 다채로운 일본어 예문 5개를 만드세요.
+
+[예문 작성 규칙 - 매우 중요]:
+1. 문장의 시작 부분이나 어조가 서로 중복되거나 비슷하지 않게 다양화하세요.
+2. 기초적인 단어들로 이루어진, 매우 쉬우면서, 실생활에서 자주 쓰이는 완성도 높은 문장으로 만드세요.
+3. 한자는 현대 일본인들이 실생활에서 두루 사용하는 표준 상용한자 위주로 쓰고, 난해하거나 잘 쓰이지 않는 한자는 피하세요.
+4. 시간·수량의 '10분'은 숫자로 10分(じゅっぷん)으로 표기하고, '충분'은 한자 十分(じゅうぶん)으로 표기
+5. TTS 엔진이 읽을 때 문맥 판단 오류가 자주 발생하는 한자는 가급적 히라가나로 풀어 쓰거나, 숫자를 명확히 명시할 것
+
+[후리가나 표기 규칙 - 매우 중요]:
+- 한자 단어 바로 뒤에 [한자](히라가나) 형태처럼 한자와 후리가나를 명확히 묶어서 작성하세요.
+
+[출력 형식 규칙]:
+반드시 번호, 머리말, 인사말, 추가 설명 등을 넣지 말고 정확히 20줄로만 출력하세요.
+
+1번째 예문 일본어 문장
+1번째 예문 후리가나 표기
+1번째 예문 한국어 뜻
+1번째 예문의 대상 단어 (${targetWord})
+... (총 5세트, 20줄)`;
+    } else {
+      const count = words.length;
+      let promptText = "";
+      if (count === 1) {
+        totalSentences = 3;
+        promptText = `다음 1개의 일본어 단어('${words[0]}')를 사용하여 서로 다른 맥락의 자연스러운 일본어 예문 3개를 만드세요.`;
+      } else if (count === 2) {
+        totalSentences = 4;
+        promptText = `다음 2개의 일본어 단어 목록(${words.join(', ')})을 사용하여 총 4개의 자연스러운 일본어 예문을 만드세요. 순서는 무작위로 섞으세요.`;
+      } else {
+        totalSentences = count;
+        promptText = `다음 입력된 ${count}개의 일본어 단어 목록(${words.join(', ')})을 활용하여 총 ${count}개의 자연스러운 일본어 예문을 만드세요. 순서는 무작위로 섞으세요.`;
+      }
+
+      prompt = `${promptText}
+
+[예문 작성 규칙 - 매우 중요]:
+1. 문장의 시작 부분이나 어조가 서로 중복되거나 비슷하지 않게 다양화하세요.
+2. 기초적인 단어들로 이루어진, 매우 쉬우면서, 실생활에서 자주 쓰이는 완성도 높은 문장으로 만드세요.
+
+[후리가나 표기 규칙 - 매우 중요]:
+- 한자 단어 바로 뒤에 [한자](히라가나) 형태처럼 명확히 묶어서 작성하세요.
+
+[출력 형식 규칙]:
+요청된 예문 개수(${totalSentences}개)에 맞춰 정확히 ${totalSentences * 4}줄로만 출력하세요.
+
+1번째 예문 일본어 문장
+1번째 예문 후리가나 표기
+1번째 예문 한국어 뜻
+1번째 예문의 대상 단어
+... (총 ${totalSentences}세트)`;
+    }
+
+    const json = await callGeminiAPI(prompt, 0.85);
+    btn1.disabled = false; btn2.disabled = false;
+
+    if (json.error) {
+      if (json.error.message !== "API 키 없음") alert(`⚠️ API 오류 발생:\n${json.error.message}`);
+      return;
+    }
+
+    const badge = document.getElementById('modelBadge');
+    badge.innerText = `Gemini ${json.usedModel}`;
+    badge.style.display = 'inline-block';
+
+    let examples = [];
+    try {
+      const text = json.candidates[0].content.parts[0].text.trim();
+      const lines = text.split('\n').map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(l => l !== "");
+
+      for (let i = 0; i < lines.length; i += 4) {
+        if (lines[i]) {
+          const japaneseSentence = lines[i].trim();
+          const furiganaSentence = lines[i+1] ? lines[i+1].trim() : japaneseSentence;
+          const koreanSentence = lines[i+2] ? lines[i+2].trim() : "";
+          const targetWord = lines[i+3] ? lines[i+3].trim() : "";
+          const rubyHtml = convertToInteractiveRuby(japaneseSentence, furiganaSentence);
+
+          examples.push({ japanese: japaneseSentence, rubyHtml, korean: koreanSentence, targetWord });
+        }
+      }
+    } catch (e) {
+      alert(`파싱 오류: ${e.toString()}`);
+      return;
+    }
+
+    renderExamples(examples);
+  }
+
+  // UI 렌더링
+  function renderExamples(examples) {
+    const container = document.getElementById('examplesContainer');
+    currentIndex = -1;
+
+    container.innerHTML = examples.map((item, index) => `
+      <div class="card">
+        <div class="sentence-row">
+          <div class="text-content">
+            <div class="japanese">
+              <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index + 1}.</span>
+              <span id="sentence-${index}" style="display: none;">${item.rubyHtml}</span>
+            </div>
+            ${item.korean ? `
+              <div class="korean-container">
+                <button class="toggle-btn" onclick="toggleKorean(this, 'kor-${index}', 'word-${index}')">💡 해석</button>
+                <span id="kor-${index}" class="korean-text hidden-content">${item.korean}</span>
+                ${item.targetWord ? `<span id="word-${index}" class="word-badge hidden-content">[${item.targetWord}]</span>` : ''}
+              </div>
+            ` : ''}
+          </div>
+          <button class="play-btn" onclick="toggleAudio(${index}, '${item.japanese.replace(/'/g, "\\'")}')">▶️ 재생</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleSentence(id) {
+    const el = document.getElementById(id);
+    el.style.display = (el.style.display === 'none' || !el.style.display) ? 'inline' : 'none';
+  }
+
+  function toggleRuby(rubyElem) {
+    const targetRt = rubyElem.querySelector('rt');
+    if (!targetRt) return;
+    const wasHidden = targetRt.classList.contains('hidden-rt');
+    document.querySelectorAll('rt.ruby-text').forEach(rt => rt.classList.add('hidden-rt'));
+    if (wasHidden) targetRt.classList.remove('hidden-rt');
+  }
+
+  function toggleKorean(btn, korId, wordId) {
+    const korTarget = document.getElementById(korId);
+    const wordTarget = document.getElementById(wordId);
+    if (korTarget.classList.contains('hidden-content')) {
+      korTarget.classList.remove('hidden-content');
+      if (wordTarget) wordTarget.classList.remove('hidden-content');
+      btn.style.backgroundColor = '#e8f0fe';
+      btn.style.color = '#1a73e8';
+    } else {
+      korTarget.classList.add('hidden-content');
+      if (wordTarget) wordTarget.classList.add('hidden-content');
+      btn.style.backgroundColor = '#f1f3f4';
+      btn.style.color = '#3c4043';
+    }
+  }
+
+  // Web Speech API
+  function toggleAudio(index, text) {
+    const btns = document.querySelectorAll('.play-btn');
+    const targetBtn = btns[index];
+
+    if (window.speechSynthesis.speaking && currentIndex === index) {
+      window.speechSynthesis.cancel();
+      targetBtn.textContent = '▶️ 재생';
+      targetBtn.classList.remove('playing');
+      currentIndex = -1;
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    if (currentIndex !== -1 && btns[currentIndex]) {
+      btns[currentIndex].textContent = '▶️ 재생';
+      btns[currentIndex].classList.remove('playing');
+    }
+
+    let cleanText = text.replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").replace(/<[^>]*>/g, "").trim();
+    for (const word in PRONUNCIATION_DICTIONARY) {
+      if (PRONUNCIATION_DICTIONARY.hasOwnProperty(word)) {
+        cleanText = cleanText.replace(new RegExp(word, 'g'), PRONUNCIATION_DICTIONARY[word]);
+      }
+    }
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'ja-JP';
+    utterance.rate = 0.9;
+
+    utterance.onstart = () => {
+      currentIndex = index;
+      targetBtn.textContent = '⏸️ 정지';
+      targetBtn.classList.add('playing');
+    };
+
+    utterance.onend = () => {
+      targetBtn.textContent = '▶️ 재생';
+      targetBtn.classList.remove('playing');
+      currentIndex = -1;
+    };
+
+    utterance.onerror = () => {
+      targetBtn.textContent = '▶️ 재생';
+      targetBtn.classList.remove('playing');
+      currentIndex = -1;
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }
+</script>
+</body>
+</html>
