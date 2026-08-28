@@ -107,84 +107,144 @@
       border: 1px solid #dadce0;
       border-left: 4px solid #1a73e8;
       border-radius: 6px;
-      padding: 12px 14px;
-      margin-bottom: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      box-sizing: border-box;
     }
-    .sentence-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-    .text-content { flex: 1; min-width: 0; }
-    
-    /* 박스 높이 고정 및 후리가나 상단 영역 사전 확보 */
-    .japanese { 
-      font-size: 18px; 
-      color: #000000; 
-      line-height: 1.4; 
-      margin-bottom: 4px; 
-      margin-top: 12px; /* 후리가나 공간을 미리 확보하여 문장 밀림 방지 */
-      min-height: 2.2em;
+    .card:last-child {
+      margin-bottom: 2px;
+    }
+    .sentence-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .text-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* 첫 번째 코드의 문장 표시 방식 적용 */
+    .japanese {
+      font-size: 17px;
+      font-weight: 400;
+      color: #000000;
+      line-height: 1.6;
+      margin-top: 2px;
+      margin-bottom: 4px;
+      white-space: nowrap;
+    }
+
+    .number-btn {
+      cursor: pointer;
+      font-weight: bold;
+      color: #1a73e8;
+      user-select: none;
+      display: inline-block;
+      margin-right: 4px;
+      padding: 0 2px;
+      border-radius: 3px;
+      transition: background-color 0.2s;
+    }
+    .number-btn:hover {
+      background-color: #e8f0fe;
+    }
+
+    /* Absolute 위치 기반 후리가나 스타일 적용 */
+    ruby.interactive-ruby {
+      cursor: pointer;
+      position: relative;
+      display: inline-block;
+      vertical-align: baseline;
+    }
+
+    rb {
+      letter-spacing: normal;
+      display: inline-block;
+    }
+
+    rt.ruby-text {
+      position: absolute;
+      top: -0.85em;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: #1a73e8;
+      font-weight: normal;
+      white-space: nowrap;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    rt.hidden-rt {
+      display: none;
+    }
+
+    .korean-container {
+      margin-top: 6px;
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
+      gap: 6px;
     }
-    
-    .number-btn { cursor: pointer; font-weight: bold; color: #1a73e8; margin-right: 6px; }
-
-    /* iOS 사파리 대응 표준 루비 스타일 및 자간 유지 */
-    ruby.interactive-ruby { 
-      cursor: pointer; 
-      display: inline-ruby;
-      ruby-align: center;
-      margin: 0 1px;
+    .korean-text {
+      font-size: 13px;
+      color: #3c4043;
     }
-    
-    rt.ruby-text {
-      font-size: 10px;
-      color: #1a73e8;
-      ruby-position: over;
-      -webkit-ruby-position: over;
-      line-height: 1;
-      visibility: visible;
-      /* 👇 간격 조절 방법 (하나만 선택해서 사용하세요) */
-      margin-bottom: -2px; /* 음수 값을 크게 할수록 한자에 가까워집니다. */
+    .word-badge {
+      font-size: 13px;
+      color: #d93025;
+      font-weight: bold;
     }
-    
-    /* display: none 대신 visibility: hidden을 사용하여 레이아웃 공간을 고정 유지 */
-    rt.hidden-rt { 
-      visibility: hidden; 
+    .hidden-content {
+      display: none !important;
     }
 
-    .korean-container { margin-top: 6px; display: flex; align-items: center; gap: 6px; }
-    .korean-text { font-size: 14px; color: #3c4043; }
-    .word-badge { font-size: 13px; color: #d93025; font-weight: bold; }
-    .hidden-content { display: none !important; }
     .toggle-btn {
       border: 1px solid #dadce0;
       background-color: #f1f3f4;
       color: #3c4043;
-      padding: 4px 8px;
+      padding: 3px 8px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 11px;
       cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
     }
+    .toggle-btn:hover {
+      background-color: #e8eaed;
+    }
+
     .play-btn {
       border: none;
       background-color: #e8f0fe;
       color: #1a73e8;
-      padding: 8px 14px;
+      padding: 8px 12px;
       border-radius: 4px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      margin-top: 2px;
+      white-space: nowrap;
+      transition: background-color 0.2s;
+      flex-shrink: 0;
     }
-    .play-btn.playing { background-color: #fce8e6; color: #d93025; }
+    .play-btn:hover {
+      background-color: #d2e3fc;
+    }
+    .play-btn.playing {
+      background-color: #fce8e6;
+      color: #d93025;
+    }
     .model-badge {
       background-color: #e8f0fe;
       color: #1a73e8;
       border: 1px solid #aecbfa;
       padding: 2px 6px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 10px;
+      font-weight: bold;
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -221,7 +281,6 @@
   // 업데이트된 Google Apps Script Web App URL
   const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyKHSxogJeVH0xu2sML3-3sSw3xpU_iCXJWJuVx_OJJQzBNEWQivsG81Q3PJEgsZJL8ow/exec';
 
-  // 시트에서 동적으로 로드될 발음 사전 (시트 로드 전 예비 데이터 포함)
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
     '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギターを弾': 'ギターをひ',
@@ -262,14 +321,12 @@
       const response = await fetch(`${GAS_WEB_APP_URL}?t=${new Date().getTime()}`);
       const data = await response.json();
 
-      // 단어 목록 업데이트
       if (data.words && data.words.length > 0) {
         inputArea.value = data.words.join('\n');
       } else {
         alert("스프레드시트에 단어가 없습니다.");
       }
 
-      // 시트 기반 동적 사전 업데이트
       if (data.dictionary && typeof data.dictionary === 'object') {
         dynamicDictionary = data.dictionary;
         console.log("시트 동적 사전 불러오기 성공:", dynamicDictionary);
@@ -288,7 +345,6 @@
     if (savedKey) {
       document.getElementById('apiKeyInput').value = savedKey;
     }
-    // fetchSheetWords(); '🔄 시트 단어 불러오기' 버튼을 눌러야만 실행됩니다.
   });
 
   async function callGeminiAPI(prompt, temperature = 0.85) {
@@ -338,7 +394,6 @@
 
     let cleanText = text.replace(/\[.*?\]/g, "").replace(/\(.*?\)/g, "").replace(/<[^>]*>/g, "").trim();
     
-    // 시트 기반 동적 사전을 적용하여 TTS 읽기용 텍스트 보정
     for (const word in dynamicDictionary) {
       if (Object.prototype.hasOwnProperty.call(dynamicDictionary, word)) {
         cleanText = cleanText.replace(new RegExp(word, 'g'), dynamicDictionary[word]);
@@ -472,7 +527,6 @@
         }
       }
 
-      // 오디오 및 루비 태그 변환을 병렬로 동시 처리
       const examples = await Promise.all(rawExamples.map(async (item) => {
         const audio64 = await fetchGoogleTtsBase64(item.japanese);
         const rubyHtml = convertToInteractiveRuby(item.japanese, item.furigana);
@@ -485,21 +539,20 @@
         };
       }));
 
-      // 화면에 문장이 표시될 때까지 렌더링 완료 보장
       renderExamples(examples);
 
     } catch (e) {
       alert(`파싱 오류: ${e.toString()}`);
     } finally {
-      // 화면 표시 및 모든 처리가 완료된 후 두 버튼 활성화
       btn1.disabled = false; 
       btn2.disabled = false;
     }
   }
 
+  /* 첫 번째 코드의 HTML 구조 및 클래스/ID 방식 적용 */
   function renderExamples(examples) {
     const container = document.getElementById('examplesContainer');
-    audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
+    audioList = examples.map(item => item.audio64 ? new Audio(`data:audio/mpeg;base64,${item.audio64}`) : null);
     currentIndex = -1;
 
     container.innerHTML = examples.map((item, index) => `
@@ -508,7 +561,7 @@
           <div class="text-content">
             <div class="japanese">
               <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index + 1}.</span>
-              <span id="sentence-${index}" style="display: none;">${item.rubyHtml}</span>
+              <span id="sentence-${index}" class="sentence-body" style="display: none;">${item.rubyHtml}</span>
             </div>
             ${item.korean ? `
               <div class="korean-container">
@@ -524,37 +577,52 @@
     `).join('');
   }
 
-  function toggleSentence(id) {
-    const el = document.getElementById(id);
-    el.style.display = (el.style.display === 'none' || !el.style.display) ? 'inline' : 'none';
+  /* 첫 번째 코드의 스크립트 함수 적용 */
+  function toggleSentence(elementId) {
+    const target = document.getElementById(elementId);
+    if (!target) return;
+    if (target.style.display === 'none' || target.style.display === '') {
+      target.style.display = 'inline';
+    } else {
+      target.style.display = 'none';
+    }
   }
 
   function toggleRuby(rubyElem) {
     const targetRt = rubyElem.querySelector('rt');
     if (!targetRt) return;
+
     const wasHidden = targetRt.classList.contains('hidden-rt');
-    document.querySelectorAll('rt.ruby-text').forEach(rt => rt.classList.add('hidden-rt'));
-    if (wasHidden) targetRt.classList.remove('hidden-rt');
+
+    const allRts = document.querySelectorAll('rt.ruby-text');
+    allRts.forEach(rt => rt.classList.add('hidden-rt'));
+
+    if (wasHidden) {
+      targetRt.classList.remove('hidden-rt');
+    }
   }
 
-  function toggleKorean(btn, korId, wordId) {
+  function toggleKorean(button, korId, wordId) {
     const korTarget = document.getElementById(korId);
     const wordTarget = document.getElementById(wordId);
+
     if (korTarget.classList.contains('hidden-content')) {
       korTarget.classList.remove('hidden-content');
       if (wordTarget) wordTarget.classList.remove('hidden-content');
-      btn.style.backgroundColor = '#e8f0fe';
-      btn.style.color = '#1a73e8';
+      button.textContent = '💡 해석';
+      button.style.backgroundColor = '#e8f0fe';
+      button.style.color = '#1a73e8';
     } else {
       korTarget.classList.add('hidden-content');
       if (wordTarget) wordTarget.classList.add('hidden-content');
-      btn.style.backgroundColor = '#f1f3f4';
-      btn.style.color = '#3c4043';
+      button.textContent = '💡 해석';
+      button.style.backgroundColor = '#f1f3f4';
+      button.style.color = '#3c4043';
     }
   }
 
   function toggleAudio(index) {
-    const btns = document.querySelectorAll('.play-btn');
+    const btns = document.getElementById('examplesContainer').querySelectorAll('.play-btn');
     const targetBtn = btns[index];
     const audio = audioList[index];
 
