@@ -11,7 +11,7 @@
       margin: 0;
       padding: 16px;
       background-color: #f8f9fa;
-      font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Meiryo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       color: #202124;
     }
     .container { max-width: 800px; margin: 0 auto; }
@@ -102,6 +102,7 @@
       cursor: not-allowed; 
     }
 
+    /*첫 번째 코드 스타일 이식*/
     .card {
       background: #ffffff;
       border: 1px solid #dadce0;
@@ -125,8 +126,6 @@
       flex: 1;
       min-width: 0;
     }
-
-    /* 첫 번째 코드의 문장 표시 방식 적용 */
     .japanese {
       font-size: 17px;
       font-weight: 400;
@@ -152,7 +151,7 @@
       background-color: #e8f0fe;
     }
 
-    /* Absolute 위치 기반 후리가나 스타일 적용 */
+    /*첫 번째 코드의 absolute 후리가나 스타일*/
     ruby.interactive-ruby {
       cursor: pointer;
       position: relative;
@@ -164,7 +163,7 @@
       letter-spacing: normal;
       display: inline-block;
     }
-
+    
     rt.ruby-text {
       position: absolute;
       top: -0.85em;
@@ -177,7 +176,7 @@
       line-height: 1;
       pointer-events: none;
     }
-
+    
     rt.hidden-rt {
       display: none;
     }
@@ -236,6 +235,7 @@
       background-color: #fce8e6;
       color: #d93025;
     }
+
     .model-badge {
       background-color: #e8f0fe;
       color: #1a73e8;
@@ -278,7 +278,6 @@
 </div>
 
 <script>
-  // 업데이트된 Google Apps Script Web App URL
   const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyKHSxogJeVH0xu2sML3-3sSw3xpU_iCXJWJuVx_OJJQzBNEWQivsG81Q3PJEgsZJL8ow/exec';
 
   let dynamicDictionary = {
@@ -410,6 +409,7 @@
     }
   }
 
+  /* 첫 번째 코드 방식의 루비 구조 사용 (rb + rt absolute) */
   function convertToInteractiveRuby(kanjiText, furiganaText) {
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
@@ -549,7 +549,7 @@
     }
   }
 
-  /* 첫 번째 코드의 HTML 구조 및 클래스/ID 방식 적용 */
+  /* 첫 번째 코드의 HTML 구조 적용 (sentence-body span 및 숨김 방식) */
   function renderExamples(examples) {
     const container = document.getElementById('examplesContainer');
     audioList = examples.map(item => item.audio64 ? new Audio(`data:audio/mpeg;base64,${item.audio64}`) : null);
@@ -577,7 +577,6 @@
     `).join('');
   }
 
-  /* 첫 번째 코드의 스크립트 함수 적용 */
   function toggleSentence(elementId) {
     const target = document.getElementById(elementId);
     if (!target) return;
@@ -622,12 +621,12 @@
   }
 
   function toggleAudio(index) {
-    const btns = document.getElementById('examplesContainer').querySelectorAll('.play-btn');
+    const btns = document.querySelectorAll('.play-btn');
     const targetBtn = btns[index];
     const audio = audioList[index];
 
     if (!audio) {
-      alert("음성 데이터를 불러오지 못했습니다. GAS 배포 상태를 확인해주세요.");
+      alert("음성 데이터를 불러오지 못했습니다.");
       return;
     }
 
