@@ -145,7 +145,7 @@
   </div>
 
   <div class="card-input">
-    <!-- API 키 안전 저장 입력창 -->
+    <!-- Gemini API 키 입력 및 저장 -->
     <div class="key-config">
       <input type="password" id="apiKeyInput" placeholder="Gemini API 키를 입력하세요">
       <button onclick="saveApiKey()">키 저장</button>
@@ -162,7 +162,7 @@
 </div>
 
 <script>
-  // 🔑 구글 Apps Script 웹 앱 URL을 붙여넣으세요.
+  // 🔑 1. 구글 Apps Script 웹 앱 URL을 여기에 붙여넣으세요.
   const GAS_WEB_APP_URL = '여기에_복사한_웹_앱_URL을_붙여넣으세요';
 
   const PRONUNCIATION_DICTIONARY = {
@@ -174,7 +174,7 @@
 
   let currentIndex = -1;
 
-  // 저장된 API 키 불러오기
+  // API 키 로컬 스토리지 관리
   function getApiKey() {
     return localStorage.getItem('GEMINI_API_KEY') || '';
   }
@@ -189,7 +189,7 @@
     alert("API 키가 브라우저에 안전하게 저장되었습니다.");
   }
 
-  // 초기화
+  // 💡 앱 실행 시 구글 시트 B열 데이터 자동으로 불러오기
   window.addEventListener('DOMContentLoaded', async () => {
     const savedKey = getApiKey();
     if (savedKey) {
@@ -197,6 +197,7 @@
     }
 
     const inputArea = document.getElementById('inputText');
+    
     if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) {
       inputArea.placeholder = "단어를 입력해주세요. (줄바꿈으로 구별)";
       return;
@@ -205,12 +206,14 @@
     try {
       const response = await fetch(GAS_WEB_APP_URL);
       const data = await response.json();
+
       if (data.words && data.words.length > 0) {
         inputArea.value = data.words.join('\n');
       } else {
         inputArea.placeholder = "스프레드시트 B열에 단어가 없습니다.";
       }
     } catch (e) {
+      console.error("스프레드시트 연동 오류:", e);
       inputArea.placeholder = "스프레드시트에서 단어를 불러오지 못했습니다. 직접 입력해 주세요.";
     }
   });
@@ -276,7 +279,7 @@
     return targetText;
   }
 
-  // 예문 생성
+  // 예문 생성 로직
   async function processWords(isRandomMode) {
     const rawInput = document.getElementById('inputText').value.trim();
     if (!rawInput) {
