@@ -127,7 +127,7 @@
       font-size: 17px;
       font-weight: 400;
       color: #000000;
-      line-height: 1.8;
+      line-height: 2.0;                  /* 후리가나 영역 포함 줄 높이 안전 확보 */
       margin: 2px 0;
       word-break: keep-all;
       overflow-wrap: break-word;
@@ -146,29 +146,24 @@
     }
     .number-btn:hover { background-color: #e8f0fe; }
 
-    /* Cross-browser 크로스 브라우저 크로스 OS 대응 크로스 렌더링 루비 스타일 */
+    /* Cross-browser 크로스 브라우저 크로스 OS 대응 표준 루비 스타일 */
     ruby.interactive-ruby {
       cursor: pointer;
-      display: inline-flex;
-      flex-direction: column-reverse;
-      vertical-align: bottom;
-      align-items: center;
-      text-align: center;
-      line-height: 1.1;
+      ruby-position: over;               /* 후리가나 상단 배치 표준 */
+      -webkit-ruby-position: over;       /* iOS Safari WebKit 전용 대응 */
+      display: inline-ruby;              /* Safari 수평 Baseline 붕괴 완벽 방지 */
       margin: 0 1px;
     }
 
     rt.ruby-text {
-      display: block;
       font-size: 10px;
       color: #1a73e8;
       font-weight: normal;
       white-space: nowrap;
-      line-height: 1.2;
-      height: 12px;
-      margin-bottom: 2px;
+      line-height: 1;
       user-select: none;
       -webkit-user-select: none;
+      text-align: center;
     }
 
     /* 토글 시 레이아웃 변동(Reflow)을 막기 위해 display:none 대신 visibility 처리 */
@@ -273,7 +268,7 @@
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
-    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギターを弾': 'ギター를ひ',
+    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギターを弾': 'ギターをひ',
     '道に': 'みちに', '等': 'など'
   };
 
@@ -400,7 +395,7 @@
     }
   }
 
-  /* 표준 <ruby> 구조 적용 (사파리 호환성 해결) */
+  /* 표준 <ruby> 구조 적용 (한자 + <rt>후리가나</rt> 배치로 사파리 크로스 브라우징 완벽 해결) */
   function convertToInteractiveRuby(kanjiText, furiganaText) {
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
@@ -408,12 +403,12 @@
 
     if (targetText.includes('](')) {
       targetText = targetText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, k, f) => 
-        `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rt class="ruby-text hidden-rt">${f}</rt>${k}</ruby>`
+        `<ruby class="interactive-ruby" onclick="toggleRuby(this)">${k}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`
       );
     }
     targetText = targetText.replace(/([一-龠a-zA-Z0-9]+|\[[一-龠a-zA-Z0-9]+\])\[([^\]]+)\]/g, (m, k, f) => {
       const cleanK = k.replace(/[\[\]]/g, '');
-      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rt class="ruby-text hidden-rt">${f}</rt>${cleanK}</ruby>`;
+      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)">${cleanK}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
     });
     return targetText;
   }
@@ -542,7 +537,6 @@
 
   function renderExamples(examples) {
     const container = document.getElementById('examplesContainer');
-    /* 오디오 이중 접두사 버그 방지 (item.audio64 직접 대입) */
     audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
     currentIndex = -1;
 
