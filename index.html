@@ -171,41 +171,45 @@
     /* =========================================================
        [개선] 긴 후리가나 여백 및 자간 최적화 CSS
        ========================================================= */
-/* 1. ruby 태그 기본 브라우저 스타일 초기화 및 인라인 블록화 */
+/* 1. ruby 태그를 일반 인라인 flex 박스로 변경 (iOS UA 스타일 무시) */
 ruby.interactive-ruby {
-  display: inline-block;
-  position: relative;
-  vertical-align: baseline;
-  text-align: center;
-  margin: 0;
-  padding: 0;
-  line-height: 1.2;
+  display: inline-flex !important;
+  flex-direction: column-reverse !important; /* 아래: 한자 / 위: 후리가나 */
+  align-items: center !important;
+  vertical-align: baseline !important;
+  position: relative !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
 }
 
-/* 2. rt 태그를 레이아웃에 영향을 주지 않는 블록으로 전환 */
+/* 2. 한자 본문 높이 및 정렬 고정 */
+ruby.interactive-ruby > *:not(rt) {
+  line-height: inherit;
+}
+
+/* 3. rt 태그를 상단에 배치되는 별도 블록 요소로 정의 */
 rt.ruby-text {
-  display: block;
-  font-size: 10px;
-  line-height: 1.1;
-  color: #1a73e8;
-  font-weight: normal;
-  text-align: center;
-  white-space: nowrap;
+  display: block !important;
+  position: absolute !important;
+  bottom: 100% !important;                 /* 한자 바로 위에 배치 */
+  left: 50% !important;
+  transform: translateX(-50%) !important;  /* 가로 정확히 중앙 정렬 */
   
-  /* 위치 및 레이아웃 제어 */
-  position: absolute;
-  bottom: 100%;             /* 한자 바로 위에 딱 붙게 배치 */
-  left: 50%;
-  transform: translateX(-50%); /* 정확한 중앙 정렬 */
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+  color: #1a73e8 !important;
+  font-weight: normal !important;
+  white-space: nowrap !important;
   
-  margin: 0;
-  padding: 0 0 2px 0;       /* 한자와 후리가나 사이 위아래 미세 간격 조정 (숫자로 조절 가능) */
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
+  margin: 0 0 2px 0 !important;             /* 한자와 후리가나 사이 간격 */
+  padding: 0 !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
 }
 
-/* 3. 후리가나 숨김 상태 */
+/* 4. 후리가나 숨김 상태 처리 */
 rt.ruby-text.hidden-rt {
   display: none !important;
 }
@@ -296,7 +300,7 @@ rt.ruby-text.hidden-rt {
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5문장</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
