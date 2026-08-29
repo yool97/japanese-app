@@ -203,7 +203,7 @@ rt.ruby-text {
 /* [핵심 3] hidden 처리 시 iOS 사파리에서 공간(Space)을 잡지 않고 정상 비가시화 */
 rt.ruby-text.hidden-rt {
   visibility: hidden;
-  /* font-size: 0px !important;            iOS에서 hidden일 때 여백 생김 완전 차단 (원래 주석처리 없음)*/
+  font-size: 0px !important;           /* iOS에서 hidden일 때 여백 생김 완전 차단*/
   letter-spacing: 0px !important;
 }
 
@@ -294,7 +294,7 @@ rt.ruby-text.hidden-rt {
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5문장 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
