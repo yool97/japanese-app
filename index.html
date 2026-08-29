@@ -7,15 +7,27 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
   <style>
     * { box-sizing: border-box; }
+    
+    /* =========================================================
+       [크기 제어 1] 페이지 전체 기본 여백 및 배경
+       ========================================================= */
     body {
       margin: 0;
-      padding: 16px;
+      padding: 16px;                     /* 페이지 외곽 여백 (상하좌우 16px) */
       background-color: #f8f9fa;
       font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
       color: #202124;
-      -webkit-text-size-adjust: 100%; /* iOS 사파리 글자 크기 자동 확대 방지 */
+      -webkit-text-size-adjust: 100%;
     }
-    .container { max-width: 800px; margin: 0 auto; }
+
+    /* =========================================================
+       [크기 제어 2] 중앙 컨테이너 최대 너비
+       ========================================================= */
+    .container { 
+      max-width: 800px;                  /* 앱의 전체 최대 너비 제한 */
+      margin: 0 auto; 
+    }
+
     .header {
       font-size: 20px;
       font-weight: bold;
@@ -25,12 +37,16 @@
       justify-content: space-between;
       align-items: center;
     }
+
+    /* =========================================================
+       [크기 제어 3] 입력창 영역 박스 (상단 대형 카드)
+       ========================================================= */
     .card-input {
       background: #ffffff;
       border: 1px solid #dadce0;
       border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 20px;
+      padding: 16px;                     /* 입력 카드 내부 여백 */
+      margin-bottom: 20px;               /* 예문 카드 목록과의 간격 */
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .key-config {
@@ -74,9 +90,11 @@
       gap: 4px;
     }
     .reload-btn:hover { background-color: #e8eaed; }
+    
+    /* 텍스트 입력창 높이 제어 */
     textarea {
       width: 100%;
-      height: 120px;
+      height: 120px;                     /* 텍스트 입력 박스 높이 */
       padding: 10px;
       border: 1px solid #dadce0;
       border-radius: 6px;
@@ -90,7 +108,7 @@
       background-color: #1a73e8;
       color: #ffffff;
       border: none;
-      padding: 12px;
+      padding: 12px;                     /* 버튼 높이/두께 제어 */
       border-radius: 6px;
       font-size: 14px;
       font-weight: bold;
@@ -101,13 +119,16 @@
       cursor: not-allowed; 
     }
 
+    /* =========================================================
+       [크기 제어 4] 예문 개별 카드 박스
+       ========================================================= */
     .card {
       background: #ffffff;
       border: 1px solid #dadce0;
       border-left: 4px solid #1a73e8;
       border-radius: 6px;
-      padding: 8px 12px;
-      margin-bottom: 8px;
+      padding: 3px 12px 6px 12px;     /* 예문 카드 내부 여백  위, 오른쪽, 아래, 왼쪽 */
+      margin-bottom: 8px;                /* 카드와 카드 사이의 수평 간격 */
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     .card:last-child { margin-bottom: 2px; }
@@ -122,13 +143,15 @@
       min-width: 0;
     }
     
-    /* 일본어 문장 컨테이너 (상하 여백 및 줄바꿈 최적화) */
+    /* =========================================================
+       [높이 및 글자 제어 5] 일본어 예문 문장 영역 (행간/높이 제어)
+       ========================================================= */
     .japanese {
-      font-size: 17px;
+      font-size: 17px;                   /* 일본어 본문 글자 크기 */
       font-weight: 400;
       color: #000000;
-      line-height: 2.0;                  /* 후리가나 영역 포함 줄 높이 안전 확보 */
-      margin: 2px 0;
+      line-height: 1.5;                  /* ★ 문장 행간 높이 (루비 크기에 맞게 밀착 조정) */
+      margin: 2px 0;                     /* 문장 위아래 여백 */
       word-break: keep-all;
       overflow-wrap: break-word;
     }
@@ -146,39 +169,49 @@
     }
     .number-btn:hover { background-color: #e8f0fe; }
 
-    /* Cross-browser 크로스 브라우저 크로스 OS 대응 표준 루비 스타일 */
+    /* =========================================================
+       [한자 간격 밀착 수정] 루비(후리가나) 및 한자 배치 속성
+       ========================================================= */
     ruby.interactive-ruby {
       cursor: pointer;
-      ruby-position: over;               /* 후리가나 상단 배치 표준 */
-      -webkit-ruby-position: over;       /* iOS Safari WebKit 전용 대응 */
-      display: inline-ruby;              /* Safari 수평 Baseline 붕괴 완벽 방지 */
-      margin: 0 1px;
+      ruby-position: over;
+      -webkit-ruby-position: over;
+      display: inline-ruby;
+      margin: 0;                         /* ★ 한자 사이 양옆 여백 완전 제거 (벌어짐 방지) */
+      padding: 0;
+      letter-spacing: normal;            /* ★ 한자 글자 간격 기본 고정 */
+      ruby-align: center;                /* 후리가나 중앙 정렬 */
     }
 
     rt.ruby-text {
-      font-size: 10px;
+      font-size: 10px;                   /* 후리가나(루비) 글자 크기 */
       color: #1a73e8;
       font-weight: normal;
       white-space: nowrap;
-      line-height: 1;
+      line-height: 1;                    /* 후리가나 자체 텍스트 높이 극소화 */
       user-select: none;
       -webkit-user-select: none;
       text-align: center;
+      margin: 0;
+      padding: 0;
     }
 
-    /* 토글 시 레이아웃 변동(Reflow)을 막기 위해 display:none 대신 visibility 처리 */
+    /* 토글 시 레이아웃 변동(Reflow)을 막기 위해 visibility 처리 */
     rt.ruby-text.hidden-rt {
       visibility: hidden;
     }
 
+    /* =========================================================
+       [크기 제어 6] 한국어 해석 영역
+       ========================================================= */
     .korean-container {
-      margin-top: 4px;
+      margin-top: 4px;                   /* 일본어 문장과의 간격 */
       display: flex;
       align-items: center;
       gap: 6px;
     }
     .korean-text {
-      font-size: 13px;
+      font-size: 13px;                   /* 한국어 번역 글자 크기 */
       color: #3c4043;
     }
     .word-badge {
@@ -190,11 +223,12 @@
       display: none !important;
     }
 
+    /* 버튼 크기 제어 */
     .toggle-btn {
       border: 1px solid #dadce0;
       background-color: #f1f3f4;
       color: #3c4043;
-      padding: 3px 8px;
+      padding: 3px 8px;                  /* 해석 버튼 내부 여백 */
       border-radius: 4px;
       font-size: 11px;
       cursor: pointer;
@@ -207,7 +241,7 @@
       border: none;
       background-color: #e8f0fe;
       color: #1a73e8;
-      padding: 8px 12px;
+      padding: 8px 12px;                 /* 재생 버튼 내부 여백 */
       border-radius: 4px;
       font-size: 12px;
       font-weight: 600;
@@ -395,7 +429,6 @@
     }
   }
 
-  /* 표준 <ruby> 구조 적용 (한자 + <rt>후리가나</rt> 배치로 사파리 크로스 브라우징 완벽 해결) */
   function convertToInteractiveRuby(kanjiText, furiganaText) {
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
@@ -606,7 +639,7 @@
   }
 
   function toggleAudio(index) {
-    const btns = document.querySelectorAll('.play-btn');
+    const btns = document.getElementById('examplesContainer').querySelectorAll('.play-btn');
     const targetBtn = btns[index];
     const audio = audioList[index];
 
