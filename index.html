@@ -127,7 +127,7 @@
       border: 1px solid #dadce0;
       border-left: 4px solid #1a73e8;
       border-radius: 6px;
-      padding: 3px 12px 6px 12px;     /* 예문 카드 내부 여백  위, 오른쪽, 아래, 왼쪽 */
+      padding: 4px 12px 8px 12px;                 /* 예문 카드 내부 상-우-하-좌 여백 */
       margin-bottom: 8px;                /* 카드와 카드 사이의 수평 간격 */
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
@@ -150,7 +150,7 @@
       font-size: 17px;                   /* 일본어 본문 글자 크기 */
       font-weight: 400;
       color: #000000;
-      line-height: 1.5;                  /* ★ 문장 행간 높이 (루비 크기에 맞게 밀착 조정) */
+      line-height: 1.5;                  /* 문장 행간 높이 */
       margin: 2px 0;                     /* 문장 위아래 여백 */
       word-break: keep-all;
       overflow-wrap: break-word;
@@ -170,6 +170,17 @@
     .number-btn:hover { background-color: #e8f0fe; }
 
     /* =========================================================
+       [카드 박스 크기 고정 제어] 문장 숨김 시 영역 고정
+       ========================================================= */
+    .sentence-body {
+      display: inline;
+    }
+    /* 문장을 숨겨도 카드 높이가 축소되지 않고 고정되도록 visibility 처리 */
+    .sentence-body.hidden-sentence {
+      visibility: hidden;
+    }
+
+    /* =========================================================
        [한자 간격 밀착 수정] 루비(후리가나) 및 한자 배치 속성
        ========================================================= */
     ruby.interactive-ruby {
@@ -177,9 +188,9 @@
       ruby-position: over;
       -webkit-ruby-position: over;
       display: inline-ruby;
-      margin: 0;                         /* ★ 한자 사이 양옆 여백 완전 제거 (벌어짐 방지) */
+      margin: 0;                         /* 한자 사이 양옆 여백 완전 제거 (벌어짐 방지) */
       padding: 0;
-      letter-spacing: normal;            /* ★ 한자 글자 간격 기본 고정 */
+      letter-spacing: normal;            /* 한자 글자 간격 기본 고정 */
       ruby-align: center;                /* 후리가나 중앙 정렬 */
     }
 
@@ -573,13 +584,14 @@
     audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
     currentIndex = -1;
 
+    /* 문장이 가려져도 박스 높이가 그대로 유지되도록 hidden-sentence 클래스 초기 부여 */
     container.innerHTML = examples.map((item, index) => `
       <div class="card">
         <div class="sentence-row">
           <div class="text-content">
             <div class="japanese">
               <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index + 1}.</span>
-              <span id="sentence-${index}" class="sentence-body" style="display: none;">${item.rubyHtml}</span>
+              <span id="sentence-${index}" class="sentence-body hidden-sentence">${item.rubyHtml}</span>
             </div>
             ${item.korean ? `
               <div class="korean-container">
@@ -595,14 +607,11 @@
     `).join('');
   }
 
+  /* 문장 토글 시 박스 높이가 변하지 않도록 hidden-sentence 클래스 토글 */
   function toggleSentence(elementId) {
     const target = document.getElementById(elementId);
     if (!target) return;
-    if (target.style.display === 'none' || target.style.display === '') {
-      target.style.display = 'inline';
-    } else {
-      target.style.display = 'none';
-    }
+    target.classList.toggle('hidden-sentence');
   }
 
   function toggleRuby(rubyElem) {
