@@ -169,41 +169,37 @@
     }
 
     /* =========================================================
-       [개선] 긴 후리가나 여백 및 자간 최적화 CSS
+       [iOS 완벽 대응] Cross-Browser Custom Ruby System (완전 교체)
        ========================================================= */
-/* ruby 요소에 WebKit 고유 루비 레이아웃 해제 */
-ruby.interactive-ruby {
-  -webkit-ruby-position: over !important;
-  ruby-position: over !important;
-  display: inline-block !important;
-  position: relative !important;
-  vertical-align: baseline !important;
-  text-align: center !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  line-height: 1.4 !important; /* 한자가 떨어지는 것을 방지하기 위해 높이 확보 */
-}
+    .custom-ruby {
+      display: inline-block !important;
+      position: relative !important;
+      text-align: center !important;
+      line-height: 1.2 !important;
+      margin: 0 1px !important;
+      cursor: pointer;
+      vertical-align: baseline;
+    }
 
-rt.ruby-text {
-  /* iOS 특수 엔진 무력화 */
-  -webkit-transform: translate(-50%, 0) !important;
-  transform: translateX(-50%) !important;
-  
-  display: block !important;
-  position: absolute !important;
-  top: -1.1em !important;            /* bottom 대신 top 위치 지정으로 iOS 역전 현상 방지 */
-  left: 50% !important;
-  
-  font-size: 10px !important;
-  line-height: 1 !important;
-  color: #1a73e8 !important;
-  white-space: nowrap !important;
-  pointer-events: none !important;
-}
+    .custom-rt {
+      display: block !important;
+      position: absolute !important;
+      bottom: 100% !important; /* 한자 바로 위에 정확히 배치 */
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      
+      font-size: 11px !important;
+      line-height: 1 !important;
+      color: #1a73e8 !important;
+      white-space: nowrap !important;
+      pointer-events: none !important;
+      margin-bottom: 2px !important; /* 한자와의 간격 조정 */
+    }
 
-rt.ruby-text.hidden-rt {
-  display: none !important;
-}
+    .custom-rt.hidden-rt {
+      display: none !important;
+    }
+
     .korean-container {
       margin-top: 6px;
       display: flex;
@@ -291,7 +287,7 @@ rt.ruby-text.hidden-rt {
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5문장</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
@@ -304,7 +300,7 @@ rt.ruby-text.hidden-rt {
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
-    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギターを弾': 'ギターをひ',
+    '夜は': 'よるは', 'ピアノ을 弾': 'ピアノをひ', 'ギターを弾': 'ギターをひ',
     '道に': 'みちに', '等': 'など'
   };
 
@@ -375,7 +371,6 @@ rt.ruby-text.hidden-rt {
     }
 
     const models = [
-      // { name: 'gemini-3.7-flash', label: '3.7 Flash' },
       { name: 'gemini-3.6-flash', label: '3.6 Flash' }
     ];
     let lastErrorMessage = "";
@@ -435,18 +430,21 @@ rt.ruby-text.hidden-rt {
     }
   }
 
+  // [수정됨] iOS Safari의 <ruby> 엔진 버그를 피하기 위해 커스텀 span 구조 사용
   function convertToInteractiveRuby(kanjiText, furiganaText) {
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
     
     targetText = targetText.replace(/<\/?u>/gi, "").replace(/<\/?b>/gi, "").replace(/\[\[\vert{}\]\]/g, "");
 
+    // [한자](후리가나) 형태 변환
     targetText = targetText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, k, f) => {
-      return `<ruby class="interactive-ruby" onclick="toggleRuby(this, event)">${k}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
+      return `<span class="custom-ruby" onclick="toggleRuby(this, event)">${k}<span class="custom-rt hidden-rt">${f}</span></span>`;
     });
 
+    // 한자[후리가나] 형태 변환
     targetText = targetText.replace(/([一-龠々〆ヵヶ]+)\[([^\]]+)\]/g, (m, k, f) => {
-      return `<ruby class="interactive-ruby" onclick="toggleRuby(this, event)">${k}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
+      return `<span class="custom-ruby" onclick="toggleRuby(this, event)">${k}<span class="custom-rt hidden-rt">${f}</span></span>`;
     });
 
     return targetText;
@@ -592,8 +590,7 @@ rt.ruby-text.hidden-rt {
             ${item.korean ? `
               <div class="korean-container">
                 <button class="toggle-btn" onclick="toggleKorean(this, 'kor-${index}', 'word-${index}')">💡 해석</button>
-                <span id="kor-${index}" class="korean-text hidden-content">${item.korean}</span>
-                ${item.targetWord ? `<span id="word-${index}" class="word-badge hidden-content">[${item.targetWord}]</span>` : ''}
+                <span id="kor-${index}" class="korean-text hidden-content">${item.korean}</span>${item.targetWord ? `<span id="word-${index}" class="word-badge hidden-content">[${item.targetWord}]</span>` : ''}
               </div>
             ` : ''}
           </div>
@@ -609,14 +606,15 @@ rt.ruby-text.hidden-rt {
     target.classList.toggle('hidden-sentence');
   }
 
+  // [수정됨] .custom-rt 클래스를 탐색하여 토글하도록 조절
   function toggleRuby(rubyElem, event) {
     if (event) event.stopPropagation();
-    const targetRt = rubyElem.querySelector('rt');
+    const targetRt = rubyElem.querySelector('.custom-rt');
     if (!targetRt) return;
 
     const wasHidden = targetRt.classList.contains('hidden-rt');
 
-    const allRts = document.querySelectorAll('rt.ruby-text');
+    const allRts = document.querySelectorAll('.custom-rt');
     allRts.forEach(rt => rt.classList.add('hidden-rt'));
 
     if (wasHidden) {
@@ -625,67 +623,4 @@ rt.ruby-text.hidden-rt {
   }
 
   function toggleKorean(button, korId, wordId) {
-    const korTarget = document.getElementById(korId);
-    const wordTarget = document.getElementById(wordId);
-
-    if (korTarget.classList.contains('hidden-content')) {
-      korTarget.classList.remove('hidden-content');
-      if (wordTarget) wordTarget.classList.remove('hidden-content');
-      button.textContent = '💡 해석';
-      button.style.backgroundColor = '#e8f0fe';
-      button.style.color = '#1a73e8';
-    } else {
-      korTarget.classList.add('hidden-content');
-      if (wordTarget) wordTarget.classList.add('hidden-content');
-      button.textContent = '💡 해석';
-      button.style.backgroundColor = '#f1f3f4';
-      button.style.color = '#3c4043';
-    }
-  }
-
-  function toggleAudio(index) {
-    const btns = document.getElementById('examplesContainer').querySelectorAll('.play-btn');
-    const targetBtn = btns[index];
-    const audio = audioList[index];
-
-    if (!audio) {
-      alert("음성 데이터를 불러오지 못했습니다.");
-      return;
-    }
-
-    if (currentIndex === index) {
-      if (audio.paused) {
-        audio.play().catch(e => console.error("음성 재생 실패:", e));
-        targetBtn.textContent = '⏸️ 정지';
-        targetBtn.classList.add('playing');
-      } else {
-        audio.pause();
-        targetBtn.textContent = '▶️ 재생';
-        targetBtn.classList.remove('playing');
-      }
-      return;
-    }
-
-    if (currentIndex !== -1 && audioList[currentIndex]) {
-      audioList[currentIndex].pause();
-      audioList[currentIndex].currentTime = 0;
-      if (btns[currentIndex]) {
-        btns[currentIndex].textContent = '▶️ 재생';
-        btns[currentIndex].classList.remove('playing');
-      }
-    }
-
-    currentIndex = index;
-    audio.currentTime = 0;
-    audio.play().catch(e => console.error("음성 재생 실패:", e));
-    targetBtn.textContent = '⏸️ 정지';
-    targetBtn.classList.add('playing');
-
-    audio.onended = function() {
-      targetBtn.textContent = '▶️ 재생';
-      targetBtn.classList.remove('playing');
-    };
-  }
-</script>
-</body>
-</html>
+    const korTarget = document.getElementById(5
