@@ -2,11 +2,16 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <!-- [iOS 전용] 모바일 사파리 화면 비율 고정 및 자동 확대 방지 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>일본어 예문 & 음성 학습기</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
   <style>
-    * { box-sizing: border-box; }
+    * { 
+      box-sizing: border-box; 
+      /* [iOS 전용] 모바일 사파리에서 터치 시 생기는 하이라이트 반짝임 제거 */
+      -webkit-tap-highlight-color: transparent;
+    }
     
     /* =========================================================
        [크기 제어 1] 페이지 전체 기본 여백 및 배경
@@ -17,6 +22,7 @@
       background-color: #f8f9fa;
       font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
       color: #202124;
+      /* [iOS 전용] 가로 모드 전환 시 사파리가 폰트 크기를 자동으로 키우는 현상 방지 */
       -webkit-text-size-adjust: 100%;
     }
 
@@ -60,6 +66,8 @@
       border: 1px solid #dadce0;
       border-radius: 6px;
       font-size: 13px;
+      /* [iOS 전용] input 영역 내부 기본 그림자 및 스타일 제거 */
+      -webkit-appearance: none;
     }
     .key-config button {
       background-color: #5f6368;
@@ -101,6 +109,8 @@
       font-size: 15px;
       resize: vertical;
       margin-bottom: 12px;
+      /* [iOS 전용] 모바일 사파리 기본 그림자 및 모서리 곡률 기본값 초기화 */
+      -webkit-appearance: none;
     }
     .btn-group { display: flex; gap: 10px; }
     button.main-btn {
@@ -113,6 +123,8 @@
       font-size: 14px;
       font-weight: bold;
       cursor: pointer;
+      /* [iOS 전용] 모바일 사파리 기본 버튼 스타일 초기화 */
+      -webkit-appearance: none;
     }
     button.main-btn:disabled { 
       background-color: #bdc1c6 !important; 
@@ -127,7 +139,7 @@
       border: 1px solid #dadce0;
       border-left: 4px solid #1a73e8;
       border-radius: 6px;
-      padding: 4px 12px 8px 12px;                 /* 예문 카드 내부 상-우-하-좌 여백 */
+      padding: 4px 12px 8px 12px;         /* 예문 카드 내부 상-우-하-좌 여백 */
       margin-bottom: 8px;                 /* 카드와 카드 사이의 수평 간격 */
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
@@ -150,7 +162,7 @@
       font-size: 17px;                   /* 일본어 본문 글자 크기 */
       font-weight: 400;
       color: #000000;
-      line-height: 1.6;                  /* 루비 태그 높이를 고려하여 행간 간격 조절 */
+      line-height: 1.8;                  /* 루비 여백 방지 후 겹침 방지용 행간 설정 */
       margin: 2px 0;                     /* 문장 위아래 여백 */
       word-break: keep-all;
       overflow-wrap: break-word;
@@ -161,6 +173,8 @@
       font-weight: bold;
       color: #1a73e8;
       user-select: none;
+      /* [iOS 전용] iOS 텍스트 드래그 및 선택 영역 방지 */
+      -webkit-user-select: none;
       display: inline-block;
       margin-right: 4px;
       padding: 0 2px;
@@ -181,32 +195,41 @@
     }
 
     /* =========================================================
-       [iOS 사파리 한자 벌어짐 해결 수정 루비(후리가나) CSS]
+       [모바일 사파리/안드로이드 한자 좌우 여백 버그 완전 해결]
        ========================================================= */
     ruby.interactive-ruby {
       cursor: pointer;
-      ruby-position: over;
-      -webkit-ruby-position: over;
-      display: inline-flex;
+      /* inline-flex + column 방식을 통해 브라우저 고유 루비 여백 계산 무력화 */
+      display: inline-flex !important;
       flex-direction: column-reverse;
       align-items: center;
       vertical-align: bottom;
-      margin: 0;
+      margin: 0 1px;
       padding: 0;
-      letter-spacing: normal;
+      border: 0;
+      line-height: 1;
+    }
+
+    ruby.interactive-ruby > span {
+      display: block;
+      line-height: 1.2;
+      text-align: center;
     }
 
     rt.ruby-text {
+      display: block !important;
       font-size: 10px;                   /* 후리가나(루비) 글자 크기 */
       color: #1a73e8;
       font-weight: normal;
       white-space: nowrap;
-      line-height: 1.2;
+      line-height: 1.1;
+      margin: 0 0 2px 0;                 /* 후리가나와 한자 사이 세로 간격 */
+      padding: 0;
+      text-align: center;
       user-select: none;
       -webkit-user-select: none;
-      text-align: center;
-      margin: 0;
-      padding: 0;
+      /* 후리가나가 너무 긴 경우 좁은 간격으로 자동 조정하여 여백 제거 */
+      letter-spacing: -0.5px;
     }
 
     /* 토글 시 레이아웃 변동(Reflow)을 막기 위해 visibility 처리 */
@@ -247,6 +270,8 @@
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.2s;
+      /* [iOS 전용] 모바일 사파리 기본 버튼 스타일 제거 */
+      -webkit-appearance: none;
     }
     .toggle-btn:hover { background-color: #e8eaed; }
 
@@ -262,6 +287,8 @@
       white-space: nowrap;
       transition: background-color 0.2s;
       flex-shrink: 0;
+      /* [iOS 전용] 모바일 사파리 기본 버튼 스타일 제거 */
+      -webkit-appearance: none;
     }
     .play-btn:hover { background-color: #d2e3fc; }
     .play-btn.playing {
@@ -449,12 +476,12 @@
 
     if (targetText.includes('](')) {
       targetText = targetText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, k, f) => 
-        `<ruby class="interactive-ruby" onclick="toggleRuby(this)">${k}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`
+        `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rt class="ruby-text hidden-rt">${f}</rt><span>${k}</span></ruby>`
       );
     }
     targetText = targetText.replace(/([一-龠a-zA-Z0-9]+|\[[一-龠a-zA-Z0-9]+\])\[([^\]]+)\]/g, (m, k, f) => {
       const cleanK = k.replace(/[\[\]]/g, '');
-      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)">${cleanK}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
+      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rt class="ruby-text hidden-rt">${f}</rt><span>${cleanK}</span></ruby>`;
     });
     return targetText;
   }
@@ -586,7 +613,6 @@
     audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
     currentIndex = -1;
 
-    /* 문장이 가려져도 박스 높이가 그대로 유지되도록 hidden-sentence 클래스 초기 부여 */
     container.innerHTML = examples.map((item, index) => `
       <div class="card">
         <div class="sentence-row">
@@ -609,7 +635,6 @@
     `).join('');
   }
 
-  /* 문장 토글 시 박스 높이가 변하지 않도록 hidden-sentence 클래스 토글 */
   function toggleSentence(elementId) {
     const target = document.getElementById(elementId);
     if (!target) return;
