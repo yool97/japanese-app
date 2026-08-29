@@ -2,30 +2,19 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <!-- [iOS 전용] 모바일 사파리 화면 비율 고정 및 자동 확대 방지 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>일본어 예문 & 음성 학습기</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
   <style>
-    * { 
-      box-sizing: border-box; 
-      -webkit-tap-highlight-color: transparent;
-    }
-    
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       padding: 16px;
       background-color: #f8f9fa;
-      font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+      font-family: "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Meiryo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       color: #202124;
-      -webkit-text-size-adjust: 100%;
     }
-
-    .container { 
-      max-width: 800px;
-      margin: 0 auto; 
-    }
-
+    .container { max-width: 800px; margin: 0 auto; }
     .header {
       font-size: 20px;
       font-weight: bold;
@@ -35,7 +24,6 @@
       justify-content: space-between;
       align-items: center;
     }
-
     .card-input {
       background: #ffffff;
       border: 1px solid #dadce0;
@@ -55,7 +43,6 @@
       border: 1px solid #dadce0;
       border-radius: 6px;
       font-size: 13px;
-      -webkit-appearance: none;
     }
     .key-config button {
       background-color: #5f6368;
@@ -63,8 +50,8 @@
       border: none;
       padding: 8px 12px;
       border-radius: 6px;
-      font-size: 12px;
       cursor: pointer;
+      font-size: 12px;
     }
     .input-header {
       display: flex;
@@ -85,8 +72,9 @@
       align-items: center;
       gap: 4px;
     }
-    .reload-btn:hover { background-color: #e8eaed; }
-    
+    .reload-btn:hover {
+      background-color: #e8eaed;
+    }
     textarea {
       width: 100%;
       height: 120px;
@@ -96,7 +84,6 @@
       font-size: 15px;
       resize: vertical;
       margin-bottom: 12px;
-      -webkit-appearance: none;
     }
     .btn-group { display: flex; gap: 10px; }
     button.main-btn {
@@ -109,42 +96,44 @@
       font-size: 14px;
       font-weight: bold;
       cursor: pointer;
-      -webkit-appearance: none;
     }
     button.main-btn:disabled { 
       background-color: #bdc1c6 !important; 
       cursor: not-allowed; 
     }
 
+    /*첫 번째 코드 스타일 이식*/
     .card {
       background: #ffffff;
       border: 1px solid #dadce0;
       border-left: 4px solid #1a73e8;
       border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      box-sizing: border-box;
     }
-    .card:last-child { margin-bottom: 2px; }
+    .card:last-child {
+      margin-bottom: 2px;
+    }
     .sentence-row {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
       gap: 12px;
     }
     .text-content {
       flex: 1;
       min-width: 0;
     }
-    
     .japanese {
-      font-size: 20px;
-      font-weight: 500;
+      font-size: 17px;
+      font-weight: 400;
       color: #000000;
-      line-height: 2.1;
-      margin: 0;
-      word-break: keep-all;
-      overflow-wrap: break-word;
+      line-height: 1.6;
+      margin-top: 2px;
+      margin-bottom: 4px;
+      white-space: nowrap;
     }
 
     .number-btn {
@@ -152,58 +141,46 @@
       font-weight: bold;
       color: #1a73e8;
       user-select: none;
-      -webkit-user-select: none;
       display: inline-block;
-      margin-right: 6px;
-      padding: 0 4px;
+      margin-right: 4px;
+      padding: 0 2px;
       border-radius: 3px;
       transition: background-color 0.2s;
     }
-    .number-btn:hover { background-color: #e8f0fe; }
-
-    .sentence-body {
-      display: inline;
-    }
-    .sentence-body.hidden-sentence {
-      visibility: hidden;
+    .number-btn:hover {
+      background-color: #e8f0fe;
     }
 
-    /* =========================================================
-       [개선] 긴 후리가나 여백 및 자간 최적화 CSS
-       ========================================================= */
-/* ruby 요소에 WebKit 고유 루비 레이아웃 해제 */
-ruby.interactive-ruby {
-  -webkit-ruby-position: over !important;
-  ruby-position: over !important;
-  display: inline-block !important;
-  position: relative !important;
-  vertical-align: baseline !important;
-  text-align: center !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  line-height: 1.4 !important; /* 한자가 떨어지는 것을 방지하기 위해 높이 확보 */
-}
+    /*첫 번째 코드의 absolute 후리가나 스타일*/
+    ruby.interactive-ruby {
+      cursor: pointer;
+      position: relative;
+      display: inline-block;
+      vertical-align: baseline;
+    }
 
-rt.ruby-text {
-  /* iOS 특수 엔진 무력화 */
-  -webkit-transform: translate(-50%, 0) !important;
-  transform: translateX(-50%) !important;
-  
-  display: block !important;
-  position: absolute !important;
-  top: -1.1em !important;            /* bottom 대신 top 위치 지정으로 iOS 역전 현상 방지 */
-  left: 50% !important;
-  
-  font-size: 10px !important;
-  line-height: 1 !important;
-  color: #1a73e8 !important;
-  white-space: nowrap !important;
-  pointer-events: none !important;
-}
+    rb {
+      letter-spacing: normal;
+      display: inline-block;
+    }
+    
+    rt.ruby-text {
+      position: absolute;
+      top: -0.85em;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: #1a73e8;
+      font-weight: normal;
+      white-space: nowrap;
+      line-height: 1;
+      pointer-events: none;
+    }
+    
+    rt.hidden-rt {
+      display: none;
+    }
 
-rt.ruby-text.hidden-rt {
-  display: none !important;
-}
     .korean-container {
       margin-top: 6px;
       display: flex;
@@ -211,7 +188,7 @@ rt.ruby-text.hidden-rt {
       gap: 6px;
     }
     .korean-text {
-      font-size: 14px;
+      font-size: 13px;
       color: #3c4043;
     }
     .word-badge {
@@ -227,32 +204,33 @@ rt.ruby-text.hidden-rt {
       border: 1px solid #dadce0;
       background-color: #f1f3f4;
       color: #3c4043;
-      padding: 4px 8px;
+      padding: 3px 8px;
       border-radius: 4px;
-      font-size: 12px;
+      font-size: 11px;
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.2s;
-      -webkit-appearance: none;
     }
-    .toggle-btn:hover { background-color: #e8eaed; }
+    .toggle-btn:hover {
+      background-color: #e8eaed;
+    }
 
     .play-btn {
       border: none;
       background-color: #e8f0fe;
       color: #1a73e8;
-      padding: 8px 14px;
-      border-radius: 6px;
-      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
       transition: background-color 0.2s;
       flex-shrink: 0;
-      margin-top: 4px;
-      -webkit-appearance: none;
     }
-    .play-btn:hover { background-color: #d2e3fc; }
+    .play-btn:hover {
+      background-color: #d2e3fc;
+    }
     .play-btn.playing {
       background-color: #fce8e6;
       color: #d93025;
@@ -291,7 +269,7 @@ rt.ruby-text.hidden-rt {
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5문장</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
@@ -300,7 +278,7 @@ rt.ruby-text.hidden-rt {
 </div>
 
 <script>
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx0lY3mObi3xrwSl0Efpk2pEsNCRb5HN0uSfsnKDfQOWht84MeJVwWN0r6lCTHrCxtjLg/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyKHSxogJeVH0xu2sML3-3sSw3xpU_iCXJWJuVx_OJJQzBNEWQivsG81Q3PJEgsZJL8ow/exec';
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
@@ -350,6 +328,7 @@ rt.ruby-text.hidden-rt {
 
       if (data.dictionary && typeof data.dictionary === 'object') {
         dynamicDictionary = data.dictionary;
+        console.log("시트 동적 사전 불러오기 성공:", dynamicDictionary);
       }
     } catch (e) {
       console.error("스프레드시트 연동 오류:", e);
@@ -375,8 +354,8 @@ rt.ruby-text.hidden-rt {
     }
 
     const models = [
-      // { name: 'gemini-3.7-flash', label: '3.7 Flash' },
-      { name: 'gemini-3.6-flash', label: '3.6 Flash' }
+      { name: 'gemini-3.7-flash', label: '3.7' },
+      { name: 'gemini-3.6-flash', label: '3.6' }
     ];
     let lastErrorMessage = "";
 
@@ -423,32 +402,28 @@ rt.ruby-text.hidden-rt {
     try {
       const res = await fetch(`${GAS_WEB_APP_URL}?tts=${encodeURIComponent(cleanText)}`);
       const data = await res.json();
-      let rawBase64 = data.audio64 || "";
-      
-      if (rawBase64 && !rawBase64.startsWith("data:")) {
-        rawBase64 = "data:audio/mp3;base64," + rawBase64;
-      }
-      return rawBase64;
+      return data.audio64 || "";
     } catch (e) {
       console.error("구글 TTS 불러오기 실패:", e);
       return "";
     }
   }
 
+  /* 첫 번째 코드 방식의 루비 구조 사용 (rb + rt absolute) */
   function convertToInteractiveRuby(kanjiText, furiganaText) {
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
-    
-    targetText = targetText.replace(/<\/?u>/gi, "").replace(/<\/?b>/gi, "").replace(/\[\[\vert{}\]\]/g, "");
+    targetText = targetText.replace(/<\/?u>/gi, "").replace(/<\/?b>/gi, "").replace(/\[\[|\]\]/g, "");
 
-    targetText = targetText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, k, f) => {
-      return `<ruby class="interactive-ruby" onclick="toggleRuby(this, event)">${k}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
+    if (targetText.includes('](')) {
+      targetText = targetText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, k, f) => 
+        `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rb>${k}</rb><rt class="ruby-text hidden-rt">${f}</rt></ruby>`
+      );
+    }
+    targetText = targetText.replace(/([一-龠a-zA-Z0-9]+|\[[一-龠a-zA-Z0-9]+\])\[([^\]]+)\]/g, (m, k, f) => {
+      const cleanK = k.replace(/[\[\]]/g, '');
+      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rb>${cleanK}</rb><rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
     });
-
-    targetText = targetText.replace(/([一-龠々〆ヵヶ]+)\[([^\]]+)\]/g, (m, k, f) => {
-      return `<ruby class="interactive-ruby" onclick="toggleRuby(this, event)">${k}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
-    });
-
     return targetText;
   }
 
@@ -538,9 +513,7 @@ rt.ruby-text.hidden-rt {
       badge.style.display = 'inline-block';
 
       const text = json.candidates[0].content.parts[0].text.trim();
-      const lines = text.split('\n')
-                        .map(l => l.replace(/```[a-z]*/g, '').replace(/^\d+[\.\)]\s*/, '').trim())
-                        .filter(l => l !== "");
+      const lines = text.split('\n').map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(l => l !== "");
 
       const rawExamples = [];
       for (let i = 0; i < lines.length; i += 4) {
@@ -576,6 +549,7 @@ rt.ruby-text.hidden-rt {
     }
   }
 
+  /* 첫 번째 코드의 HTML 구조 적용 (sentence-body span 및 숨김 방식) */
   function renderExamples(examples) {
     const container = document.getElementById('examplesContainer');
     audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
@@ -587,7 +561,7 @@ rt.ruby-text.hidden-rt {
           <div class="text-content">
             <div class="japanese">
               <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index + 1}.</span>
-              <span id="sentence-${index}" class="sentence-body hidden-sentence">${item.rubyHtml}</span>
+              <span id="sentence-${index}" class="sentence-body" style="display: none;">${item.rubyHtml}</span>
             </div>
             ${item.korean ? `
               <div class="korean-container">
@@ -606,11 +580,14 @@ rt.ruby-text.hidden-rt {
   function toggleSentence(elementId) {
     const target = document.getElementById(elementId);
     if (!target) return;
-    target.classList.toggle('hidden-sentence');
+    if (target.style.display === 'none' || target.style.display === '') {
+      target.style.display = 'inline';
+    } else {
+      target.style.display = 'none';
+    }
   }
 
-  function toggleRuby(rubyElem, event) {
-    if (event) event.stopPropagation();
+  function toggleRuby(rubyElem) {
     const targetRt = rubyElem.querySelector('rt');
     if (!targetRt) return;
 
@@ -644,7 +621,7 @@ rt.ruby-text.hidden-rt {
   }
 
   function toggleAudio(index) {
-    const btns = document.getElementById('examplesContainer').querySelectorAll('.play-btn');
+    const btns = document.querySelectorAll('.play-btn');
     const targetBtn = btns[index];
     const audio = audioList[index];
 
@@ -655,7 +632,7 @@ rt.ruby-text.hidden-rt {
 
     if (currentIndex === index) {
       if (audio.paused) {
-        audio.play().catch(e => console.error("음성 재생 실패:", e));
+        audio.play();
         targetBtn.textContent = '⏸️ 정지';
         targetBtn.classList.add('playing');
       } else {
@@ -677,7 +654,7 @@ rt.ruby-text.hidden-rt {
 
     currentIndex = index;
     audio.currentTime = 0;
-    audio.play().catch(e => console.error("음성 재생 실패:", e));
+    audio.play();
     targetBtn.textContent = '⏸️ 정지';
     targetBtn.classList.add('playing');
 
