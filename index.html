@@ -171,30 +171,41 @@
     /* =========================================================
        [개선] 긴 후리가나 여백 및 자간 최적화 CSS
        ========================================================= */
-    ruby.interactive-ruby {
-      cursor: pointer;
-      display: inline-ruby;
-      ruby-align: space-around;          /* 후리가나가 길 때 자간 균등 분배 */
-      ruby-position: over;               /* 한자 상단 위치 명시 */
-      margin: 0 0.5px;                   /* 단어 간 좌우 여백 미세 조율 */
-    }
+ruby.interactive-ruby {
+  cursor: pointer;
+  display: inline-ruby;
+  ruby-align: space-around;
+  ruby-position: over;
+  margin: 0 0.5px;
+  
+  /* [핵심 1] iOS WebKit이 후리가나 폭 때문에 한자 간격을 과도하게 벌리는 현상 방지 */
+  -webkit-ruby-position: over;
+  ruby-overhang: auto;
+}
 
-    rt.ruby-text {
-      font-size: 10.5px;                 /* 글자 크기를 살짝 축소하여 넓은 여백 방지 */
-      letter-spacing: -0.5px;             /* 긴 히라가나 자간 축소 */
-      color: #1a73e8;
-      font-weight: normal;
-      text-align: center;
-      user-select: none;
-      -webkit-user-select: none;
-      line-height: 1;
-      position: relative;
-      bottom: -0.1em;                     /* 한자와의 상하 밀착도 향상 */
-    }
+rt.ruby-text {
+  font-size: 10px;                     /* iOS 렌더링 스케일 고려 크기 축소 */
+  color: #1a73e8;
+  font-weight: normal;
+  text-align: center;
+  user-select: none;
+  -webkit-user-select: none;
+  line-height: 1;
+  position: relative;
+  bottom: -0.1em;
 
-    rt.ruby-text.hidden-rt {
-      visibility: hidden;
-    }
+  /* [핵심 2] iOS 사파리가 rt 자간/폭을 잘못 계산하지 않도록 절대 폭 축소 고정 */
+  display: ruby-text;
+  letter-spacing: -1px !important;    /* iOS 전용 자간 강제 축소 */
+  max-width: 100%;                     /* 상위 한자 박스를 밀어내지 않도록 제한 */
+}
+
+/* [핵심 3] hidden 처리 시 iOS 사파리에서 공간(Space)을 잡지 않고 정상 비가시화 */
+rt.ruby-text.hidden-rt {
+  visibility: hidden;
+  font-size: 0px !important;           /* iOS에서 hidden일 때 여백 생김 완전 차단 */
+  letter-spacing: 0px !important;
+}
 
     .korean-container {
       margin-top: 6px;
@@ -283,7 +294,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 예문 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5예문 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
