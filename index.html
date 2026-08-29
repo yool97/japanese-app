@@ -75,8 +75,8 @@
       border: none;
       padding: 8px 12px;
       border-radius: 6px;
-      cursor: pointer;
       font-size: 12px;
+      cursor: pointer;
     }
     .input-header {
       display: flex;
@@ -139,15 +139,15 @@
       border: 1px solid #dadce0;
       border-left: 4px solid #1a73e8;
       border-radius: 6px;
-      padding: 4px 12px 8px 12px;         /* 예문 카드 내부 상-우-하-좌 여백 */
-      margin-bottom: 8px;                 /* 카드와 카드 사이의 수평 간격 */
+      padding: 12px;                      /* 예문 카드 내부 여백 보정 */
+      margin-bottom: 10px;                /* 카드 간 간격 */
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     .card:last-child { margin-bottom: 2px; }
     .sentence-row {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       gap: 12px;
     }
     .text-content {
@@ -159,11 +159,11 @@
        [높이 및 글자 제어 5] 일본어 예문 문장 영역 (행간/높이 제어)
        ========================================================= */
     .japanese {
-      font-size: 17px;                   /* 일본어 본문 글자 크기 */
-      font-weight: 400;
+      font-size: 20px;                   /* 일본어 본문 글자 크기 */
+      font-weight: 500;
       color: #000000;
-      line-height: 1.8;                  /* 루비 여백 방지 후 겹침 방지용 행간 설정 */
-      margin: 2px 0;                     /* 문장 위아래 여백 */
+      line-height: 2.2;                  /* 루비 텍스트 표시 공간 확보를 위한 행간 설정 */
+      margin: 0;
       word-break: keep-all;
       overflow-wrap: break-word;
     }
@@ -173,11 +173,10 @@
       font-weight: bold;
       color: #1a73e8;
       user-select: none;
-      /* [iOS 전용] iOS 텍스트 드래그 및 선택 영역 방지 */
       -webkit-user-select: none;
       display: inline-block;
-      margin-right: 4px;
-      padding: 0 2px;
+      margin-right: 6px;
+      padding: 0 4px;
       border-radius: 3px;
       transition: background-color 0.2s;
     }
@@ -189,50 +188,31 @@
     .sentence-body {
       display: inline;
     }
-    /* 문장을 숨겨도 카드 높이가 축소되지 않고 고정되도록 visibility 처리 */
     .sentence-body.hidden-sentence {
       visibility: hidden;
     }
 
     /* =========================================================
-       [모바일 사파리/안드로이드 한자 좌우 여백 버그 완전 해결]
+       [루비(후리가나) 표준 및 모바일 최적화 CSS]
        ========================================================= */
     ruby.interactive-ruby {
       cursor: pointer;
-      /* inline-flex + column 방식을 통해 브라우저 고유 루비 여백 계산 무력화 */
-      display: inline-flex !important;
-      flex-direction: column-reverse;
-      align-items: center;
-      vertical-align: bottom;
+      display: inline-ruby;
+      ruby-align: center;
       margin: 0 1px;
-      padding: 0;
-      border: 0;
-      line-height: 1;
-    }
-
-    ruby.interactive-ruby > span {
-      display: block;
-      line-height: 1.2;
-      text-align: center;
     }
 
     rt.ruby-text {
-      display: block !important;
-      font-size: 10px;                   /* 후리가나(루비) 글자 크기 */
+      font-size: 11px;                   /* 후리가나 글자 크기 */
       color: #1a73e8;
       font-weight: normal;
-      white-space: nowrap;
-      line-height: 1.1;
-      margin: 0 0 2px 0;                 /* 후리가나와 한자 사이 세로 간격 */
-      padding: 0;
       text-align: center;
       user-select: none;
       -webkit-user-select: none;
-      /* 후리가나가 너무 긴 경우 좁은 간격으로 자동 조정하여 여백 제거 */
-      letter-spacing: -0.5px;
+      line-height: 1;
     }
 
-    /* 토글 시 레이아웃 변동(Reflow)을 막기 위해 visibility 처리 */
+    /* 클릭 토글 시 가시성 처리 (레이아웃 틀어짐 방지) */
     rt.ruby-text.hidden-rt {
       visibility: hidden;
     }
@@ -241,13 +221,13 @@
        [크기 제어 6] 한국어 해석 영역
        ========================================================= */
     .korean-container {
-      margin-top: 4px;                   /* 일본어 문장과의 간격 */
+      margin-top: 6px;
       display: flex;
       align-items: center;
       gap: 6px;
     }
     .korean-text {
-      font-size: 13px;                   /* 한국어 번역 글자 크기 */
+      font-size: 14px;
       color: #3c4043;
     }
     .word-badge {
@@ -264,13 +244,12 @@
       border: 1px solid #dadce0;
       background-color: #f1f3f4;
       color: #3c4043;
-      padding: 3px 8px;                  /* 해석 버튼 내부 여백 */
+      padding: 4px 8px;
       border-radius: 4px;
-      font-size: 11px;
+      font-size: 12px;
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.2s;
-      /* [iOS 전용] 모바일 사파리 기본 버튼 스타일 제거 */
       -webkit-appearance: none;
     }
     .toggle-btn:hover { background-color: #e8eaed; }
@@ -279,15 +258,15 @@
       border: none;
       background-color: #e8f0fe;
       color: #1a73e8;
-      padding: 8px 12px;                  /* 재생 버튼 내부 여백 */
-      border-radius: 4px;
-      font-size: 12px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
       transition: background-color 0.2s;
       flex-shrink: 0;
-      /* [iOS 전용] 모바일 사파리 기본 버튼 스타일 제거 */
+      margin-top: 4px;
       -webkit-appearance: none;
     }
     .play-btn:hover { background-color: #d2e3fc; }
@@ -329,7 +308,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어 5 예문 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 예문 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
@@ -342,7 +321,7 @@
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
-    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギターを弾': 'ギターをひ',
+    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギター를弾': 'ギターをひ',
     '道に': 'みちに', '等': 'など'
   };
 
@@ -388,7 +367,6 @@
 
       if (data.dictionary && typeof data.dictionary === 'object') {
         dynamicDictionary = data.dictionary;
-        console.log("시트 동적 사전 불러오기 성공:", dynamicDictionary);
       }
     } catch (e) {
       console.error("스프레드시트 연동 오류:", e);
@@ -414,8 +392,8 @@
     }
 
     const models = [
-      { name: 'gemini-3.7-flash', label: '3.7' },
-      { name: 'gemini-3.6-flash', label: '3.6' }
+      { name: 'gemini-1.5-flash', label: '1.5 Flash' },
+      { name: 'gemini-1.5-pro', label: '1.5 Pro' }
     ];
     let lastErrorMessage = "";
 
@@ -472,17 +450,19 @@
   function convertToInteractiveRuby(kanjiText, furiganaText) {
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
+    
     targetText = targetText.replace(/<\/?u>/gi, "").replace(/<\/?b>/gi, "").replace(/\[\[|\]\]/g, "");
 
-    if (targetText.includes('](')) {
-      targetText = targetText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, k, f) => 
-        `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rt class="ruby-text hidden-rt">${f}</rt><span>${k}</span></ruby>`
-      );
-    }
-    targetText = targetText.replace(/([一-龠a-zA-Z0-9]+|\[[一-龠a-zA-Z0-9]+\])\[([^\]]+)\]/g, (m, k, f) => {
-      const cleanK = k.replace(/[\[\]]/g, '');
-      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rt class="ruby-text hidden-rt">${f}</rt><span>${cleanK}</span></ruby>`;
+    // [한자](후리가나) 패턴 변환
+    targetText = targetText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, k, f) => {
+      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)">${k}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
     });
+
+    // 한자[후리가나] 패턴 변환
+    targetText = targetText.replace(/([一-龠々〆ヵヶ]+)\[([^\]]+)\]/g, (m, k, f) => {
+      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)">${k}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
+    });
+
     return targetText;
   }
 
@@ -647,6 +627,7 @@
 
     const wasHidden = targetRt.classList.contains('hidden-rt');
 
+    // 화면 내의 다른 모든 후리가나를 숨기고 선택한 단어만 토글
     const allRts = document.querySelectorAll('rt.ruby-text');
     allRts.forEach(rt => rt.classList.add('hidden-rt'));
 
