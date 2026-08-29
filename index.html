@@ -9,28 +9,20 @@
   <style>
     * { 
       box-sizing: border-box; 
-      /* [iOS 전용] 모바일 사파리에서 터치 시 생기는 하이라이트 반짝임 제거 */
       -webkit-tap-highlight-color: transparent;
     }
     
-    /* =========================================================
-       [크기 제어 1] 페이지 전체 기본 여백 및 배경
-       ========================================================= */
     body {
       margin: 0;
-      padding: 16px;                     /* 페이지 외곽 여백 (상하좌우 16px) */
+      padding: 16px;
       background-color: #f8f9fa;
       font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
       color: #202124;
-      /* [iOS 전용] 가로 모드 전환 시 사파리가 폰트 크기를 자동으로 키우는 현상 방지 */
       -webkit-text-size-adjust: 100%;
     }
 
-    /* =========================================================
-       [크기 제어 2] 중앙 컨테이너 최대 너비
-       ========================================================= */
     .container { 
-      max-width: 800px;                  /* 앱의 전체 최대 너비 제한 */
+      max-width: 800px;
       margin: 0 auto; 
     }
 
@@ -44,15 +36,12 @@
       align-items: center;
     }
 
-    /* =========================================================
-       [크기 제어 3] 입력창 영역 박스 (상단 대형 카드)
-       ========================================================= */
     .card-input {
       background: #ffffff;
       border: 1px solid #dadce0;
       border-radius: 8px;
-      padding: 16px;                     /* 입력 카드 내부 여백 */
-      margin-bottom: 20px;               /* 예문 카드 목록과의 간격 */
+      padding: 16px;
+      margin-bottom: 20px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     .key-config {
@@ -66,7 +55,6 @@
       border: 1px solid #dadce0;
       border-radius: 6px;
       font-size: 13px;
-      /* [iOS 전용] input 영역 내부 기본 그림자 및 스타일 제거 */
       -webkit-appearance: none;
     }
     .key-config button {
@@ -99,17 +87,15 @@
     }
     .reload-btn:hover { background-color: #e8eaed; }
     
-    /* 텍스트 입력창 높이 제어 */
     textarea {
       width: 100%;
-      height: 120px;                     /* 텍스트 입력 박스 높이 */
+      height: 120px;
       padding: 10px;
       border: 1px solid #dadce0;
       border-radius: 6px;
       font-size: 15px;
       resize: vertical;
       margin-bottom: 12px;
-      /* [iOS 전용] 모바일 사파리 기본 그림자 및 모서리 곡률 기본값 초기화 */
       -webkit-appearance: none;
     }
     .btn-group { display: flex; gap: 10px; }
@@ -118,12 +104,11 @@
       background-color: #1a73e8;
       color: #ffffff;
       border: none;
-      padding: 12px;                     /* 버튼 높이/두께 제어 */
+      padding: 12px;
       border-radius: 6px;
       font-size: 14px;
       font-weight: bold;
       cursor: pointer;
-      /* [iOS 전용] 모바일 사파리 기본 버튼 스타일 초기화 */
       -webkit-appearance: none;
     }
     button.main-btn:disabled { 
@@ -131,16 +116,13 @@
       cursor: not-allowed; 
     }
 
-    /* =========================================================
-       [크기 제어 4] 예문 개별 카드 박스
-       ========================================================= */
     .card {
       background: #ffffff;
       border: 1px solid #dadce0;
       border-left: 4px solid #1a73e8;
       border-radius: 6px;
-      padding: 12px;                      /* 예문 카드 내부 여백 보정 */
-      margin-bottom: 10px;                /* 카드 간 간격 */
+      padding: 12px;
+      margin-bottom: 10px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     .card:last-child { margin-bottom: 2px; }
@@ -155,14 +137,11 @@
       min-width: 0;
     }
     
-    /* =========================================================
-       [높이 및 글자 제어 5] 일본어 예문 문장 영역 (행간/높이 제어)
-       ========================================================= */
     .japanese {
-      font-size: 20px;                   /* 일본어 본문 글자 크기 */
+      font-size: 20px;
       font-weight: 500;
       color: #000000;
-      line-height: 2.2;                  /* 루비 텍스트 표시 공간 확보를 위한 행간 설정 */
+      line-height: 2.1;
       margin: 0;
       word-break: keep-all;
       overflow-wrap: break-word;
@@ -182,9 +161,6 @@
     }
     .number-btn:hover { background-color: #e8f0fe; }
 
-    /* =========================================================
-       [카드 박스 크기 고정 제어] 문장 숨김 시 영역 고정
-       ========================================================= */
     .sentence-body {
       display: inline;
     }
@@ -193,33 +169,33 @@
     }
 
     /* =========================================================
-       [루비(후리가나) 표준 및 모바일 최적화 CSS]
+       [개선] 긴 후리가나 여백 및 자간 최적화 CSS
        ========================================================= */
     ruby.interactive-ruby {
       cursor: pointer;
       display: inline-ruby;
-      ruby-align: center;
-      margin: 0 1px;
+      ruby-align: space-around;          /* 후리가나가 길 때 자간 균등 분배 */
+      ruby-position: over;               /* 한자 상단 위치 명시 */
+      margin: 0 0.5px;                   /* 단어 간 좌우 여백 미세 조율 */
     }
 
     rt.ruby-text {
-      font-size: 11px;                   /* 후리가나 글자 크기 */
+      font-size: 10.5px;                 /* 글자 크기를 살짝 축소하여 넓은 여백 방지 */
+      letter-spacing: -0.5px;             /* 긴 히라가나 자간 축소 */
       color: #1a73e8;
       font-weight: normal;
       text-align: center;
       user-select: none;
       -webkit-user-select: none;
       line-height: 1;
+      position: relative;
+      bottom: -0.1em;                     /* 한자와의 상하 밀착도 향상 */
     }
 
-    /* 클릭 토글 시 가시성 처리 (레이아웃 틀어짐 방지) */
     rt.ruby-text.hidden-rt {
       visibility: hidden;
     }
 
-    /* =========================================================
-       [크기 제어 6] 한국어 해석 영역
-       ========================================================= */
     .korean-container {
       margin-top: 6px;
       display: flex;
@@ -239,7 +215,6 @@
       display: none !important;
     }
 
-    /* 버튼 크기 제어 */
     .toggle-btn {
       border: 1px solid #dadce0;
       background-color: #f1f3f4;
@@ -308,7 +283,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어 5 예문 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 예문 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
@@ -321,7 +296,7 @@
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
-    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギター를弾': 'ギターをひ',
+    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギターを弾': 'ギターをひ',
     '道に': 'みちに', '等': 'など'
   };
 
@@ -440,7 +415,12 @@
     try {
       const res = await fetch(`${GAS_WEB_APP_URL}?tts=${encodeURIComponent(cleanText)}`);
       const data = await res.json();
-      return data.audio64 || "";
+      let rawBase64 = data.audio64 || "";
+      
+      if (rawBase64 && !rawBase64.startsWith("data:")) {
+        rawBase64 = "data:audio/mp3;base64," + rawBase64;
+      }
+      return rawBase64;
     } catch (e) {
       console.error("구글 TTS 불러오기 실패:", e);
       return "";
@@ -451,16 +431,14 @@
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
     
-    targetText = targetText.replace(/<\/?u>/gi, "").replace(/<\/?b>/gi, "").replace(/\[\[|\]\]/g, "");
+    targetText = targetText.replace(/<\/?u>/gi, "").replace(/<\/?b>/gi, "").replace(/\[\[\vert{}\]\]/g, "");
 
-    // [한자](후리가나) 패턴 변환
     targetText = targetText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, k, f) => {
-      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)">${k}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
+      return `<ruby class="interactive-ruby" onclick="toggleRuby(this, event)">${k}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
     });
 
-    // 한자[후리가나] 패턴 변환
     targetText = targetText.replace(/([一-龠々〆ヵヶ]+)\[([^\]]+)\]/g, (m, k, f) => {
-      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)">${k}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
+      return `<ruby class="interactive-ruby" onclick="toggleRuby(this, event)">${k}<rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
     });
 
     return targetText;
@@ -552,7 +530,9 @@
       badge.style.display = 'inline-block';
 
       const text = json.candidates[0].content.parts[0].text.trim();
-      const lines = text.split('\n').map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(l => l !== "");
+      const lines = text.split('\n')
+                        .map(l => l.replace(/```[a-z]*/g, '').replace(/^\d+[\.\)]\s*/, '').trim())
+                        .filter(l => l !== "");
 
       const rawExamples = [];
       for (let i = 0; i < lines.length; i += 4) {
@@ -621,13 +601,13 @@
     target.classList.toggle('hidden-sentence');
   }
 
-  function toggleRuby(rubyElem) {
+  function toggleRuby(rubyElem, event) {
+    if (event) event.stopPropagation();
     const targetRt = rubyElem.querySelector('rt');
     if (!targetRt) return;
 
     const wasHidden = targetRt.classList.contains('hidden-rt');
 
-    // 화면 내의 다른 모든 후리가나를 숨기고 선택한 단어만 토글
     const allRts = document.querySelectorAll('rt.ruby-text');
     allRts.forEach(rt => rt.classList.add('hidden-rt'));
 
@@ -667,7 +647,7 @@
 
     if (currentIndex === index) {
       if (audio.paused) {
-        audio.play();
+        audio.play().catch(e => console.error("음성 재생 실패:", e));
         targetBtn.textContent = '⏸️ 정지';
         targetBtn.classList.add('playing');
       } else {
@@ -689,7 +669,7 @@
 
     currentIndex = index;
     audio.currentTime = 0;
-    audio.play();
+    audio.play().catch(e => console.error("음성 재생 실패:", e));
     targetBtn.textContent = '⏸️ 정지';
     targetBtn.classList.add('playing');
 
