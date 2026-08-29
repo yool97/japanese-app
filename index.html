@@ -128,7 +128,7 @@
       border-left: 4px solid #1a73e8;
       border-radius: 6px;
       padding: 4px 12px 8px 12px;                 /* 예문 카드 내부 상-우-하-좌 여백 */
-      margin-bottom: 8px;                /* 카드와 카드 사이의 수평 간격 */
+      margin-bottom: 8px;                 /* 카드와 카드 사이의 수평 간격 */
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     .card:last-child { margin-bottom: 2px; }
@@ -150,7 +150,7 @@
       font-size: 17px;                   /* 일본어 본문 글자 크기 */
       font-weight: 400;
       color: #000000;
-      line-height: 1.5;                  /* 문장 행간 높이 */
+      line-height: 1.6;                  /* 루비 태그 높이를 고려하여 행간 간격 조절 */
       margin: 2px 0;                     /* 문장 위아래 여백 */
       word-break: keep-all;
       overflow-wrap: break-word;
@@ -181,17 +181,19 @@
     }
 
     /* =========================================================
-       [한자 간격 밀착 수정] 루비(후리가나) 및 한자 배치 속성
+       [iOS 사파리 한자 벌어짐 해결 수정 루비(후리가나) CSS]
        ========================================================= */
     ruby.interactive-ruby {
       cursor: pointer;
       ruby-position: over;
       -webkit-ruby-position: over;
-      display: inline-ruby;
-      margin: 0;                         /* 한자 사이 양옆 여백 완전 제거 (벌어짐 방지) */
+      display: inline-flex;
+      flex-direction: column-reverse;
+      align-items: center;
+      vertical-align: bottom;
+      margin: 0;
       padding: 0;
-      letter-spacing: normal;            /* 한자 글자 간격 기본 고정 */
-      ruby-align: center;                /* 후리가나 중앙 정렬 */
+      letter-spacing: normal;
     }
 
     rt.ruby-text {
@@ -199,7 +201,7 @@
       color: #1a73e8;
       font-weight: normal;
       white-space: nowrap;
-      line-height: 1;                    /* 후리가나 자체 텍스트 높이 극소화 */
+      line-height: 1.2;
       user-select: none;
       -webkit-user-select: none;
       text-align: center;
@@ -252,7 +254,7 @@
       border: none;
       background-color: #e8f0fe;
       color: #1a73e8;
-      padding: 8px 12px;                 /* 재생 버튼 내부 여백 */
+      padding: 8px 12px;                  /* 재생 버튼 내부 여백 */
       border-radius: 4px;
       font-size: 12px;
       font-weight: 600;
@@ -309,7 +311,7 @@
 </div>
 
 <script>
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyKHSxogJeVH0xu2sML3-3sSw3xpU_iCXJWJuVx_OJJQzBNEWQivsG81Q3PJEgsZJL8ow/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyKHSxogJe impulse.../exec';
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
