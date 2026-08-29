@@ -294,7 +294,7 @@ rt.ruby-text.hidden-rt {
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5문장 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5문장</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
@@ -378,7 +378,7 @@ rt.ruby-text.hidden-rt {
     }
 
     const models = [
-      { name: 'gemini-3.7-flash', label: '3.7 Flash' },
+      // { name: 'gemini-3.7-flash', label: '3.7 Flash' },
       { name: 'gemini-3.6-flash', label: '3.6 Flash' }
     ];
     let lastErrorMessage = "";
