@@ -249,7 +249,7 @@
   </style>
   
   <script>
-    /* iOS 감지 및 WebKit 렌더링 오류 보정 스크립트 */
+    /* iOS 전용 Baseline 붕괴 및 후리가나 겹침 정밀 보정 */
     (function() {
       var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -258,36 +258,48 @@
         var iosStyle = document.createElement('style');
         iosStyle.type = 'text/css';
         iosStyle.innerHTML = `
-          /* iOS WebKit 폰트 렌더링 크기 자동 변형 방지 */
+          /* WebKit 자동 폰트 크기 조절 금지 */
           html, body, ruby, rb, rt {
             -webkit-text-size-adjust: 100% !important;
           }
           
-          /* iOS 환경에서 후리가나 위치 겹침 방지 보정 */
+          /* iOS Baseline 수직 정렬 고정 */
+          .japanese {
+            display: flex !important;
+            align-items: flex-end !important;
+            line-height: 1.6 !important;
+          }
+
           ruby.interactive-ruby {
             display: inline-flex !important;
-            flex-direction: column-reverse !important;
+            flex-direction: column !important;
+            justify-content: flex-end !important;
             align-items: center !important;
-            vertical-align: bottom !important;
             position: relative !important;
-            height: auto !important;
+            vertical-align: bottom !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
           
           rb {
-            display: block !important;
+            display: inline-block !important;
             font-size: 17px !important;
             line-height: 1.2 !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
           
           rt.ruby-text {
-            position: static !important;
-            transform: none !important;
-            display: block !important;
+            position: absolute !important;
+            top: -12px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
             font-size: 11px !important;
-            line-height: 1.1 !important;
-            margin-bottom: 2px !important;
-            text-align: center !important;
-            height: auto !important;
+            line-height: 1 !important;
+            color: #1a73e8 !important;
+            white-space: nowrap !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
           
           rt.hidden-rt {
@@ -320,7 +332,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
