@@ -247,6 +247,57 @@
       white-space: nowrap;
     }
   </style>
+  
+  <script>
+    /* iOS 감지 및 WebKit 렌더링 오류 보정 스크립트 */
+    (function() {
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      if (isIOS) {
+        var iosStyle = document.createElement('style');
+        iosStyle.type = 'text/css';
+        iosStyle.innerHTML = `
+          /* iOS WebKit 폰트 렌더링 크기 자동 변형 방지 */
+          html, body, ruby, rb, rt {
+            -webkit-text-size-adjust: 100% !important;
+          }
+          
+          /* iOS 환경에서 후리가나 위치 겹침 방지 보정 */
+          ruby.interactive-ruby {
+            display: inline-flex !important;
+            flex-direction: column-reverse !important;
+            align-items: center !important;
+            vertical-align: bottom !important;
+            position: relative !important;
+            height: auto !important;
+          }
+          
+          rb {
+            display: block !important;
+            font-size: 17px !important;
+            line-height: 1.2 !important;
+          }
+          
+          rt.ruby-text {
+            position: static !important;
+            transform: none !important;
+            display: block !important;
+            font-size: 11px !important;
+            line-height: 1.1 !important;
+            margin-bottom: 2px !important;
+            text-align: center !important;
+            height: auto !important;
+          }
+          
+          rt.hidden-rt {
+            display: none !important;
+          }
+        `;
+        document.head.appendChild(iosStyle);
+      }
+    })();
+  </script>
 </head>
 <body>
 
@@ -269,7 +320,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
