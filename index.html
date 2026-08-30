@@ -112,7 +112,6 @@
       margin-bottom: 8px;
       box-shadow: 0 1px 2px rgba(0,0,0,0.05);
       box-sizing: border-box;
-      position: relative;
     }
     .card:last-child {
       margin-bottom: 2px;
@@ -216,14 +215,6 @@
       background-color: #e8eaed;
     }
 
-    .action-right {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 4px;
-      flex-shrink: 0;
-    }
-
     .play-btn {
       border: none;
       background-color: #e8f0fe;
@@ -256,51 +247,27 @@
       white-space: nowrap;
     }
 
-    /* iOS 전용 재생 버튼 상단 후리가나 팝오버 배지 스타일 */
-    .ios-furigana-popover {
-      display: none;
+    /* iOS 전용 추가 스타일 (다른 OS 영역에는 미영향) */
+    .action-column {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .ios-furigana-display {
       font-size: 12px;
       font-weight: bold;
       color: #1a73e8;
       background-color: #e8f0fe;
-      border: 1px solid #aecbfa;
       padding: 2px 8px;
-      border-radius: 12px;
+      border-radius: 4px;
+      min-height: 20px;
+      line-height: 20px;
+      visibility: hidden;
       white-space: nowrap;
     }
   </style>
-  
-  <script>
-    /* iOS 전용 전면 수정 스크립트 */
-    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-    (function() {
-      if (isIOS) {
-        var iosStyle = document.createElement('style');
-        iosStyle.type = 'text/css';
-        iosStyle.innerHTML = `
-          /* iOS에서 inline-block 및 rt 렌더링에 의한 baseline 변형 완전 원천 차단 */
-          ruby.interactive-ruby {
-            display: inline !important;
-            vertical-align: baseline !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          rb {
-            display: inline !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          /* inline rt로 인한 문장 내려앉음 완전 방지 */
-          rt.ruby-text {
-            display: none !important;
-          }
-        `;
-        document head.appendChild(iosStyle);
-      }
-    })();
-  </script>
 </head>
 <body>
 
@@ -323,7 +290,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
@@ -332,6 +299,9 @@
 </div>
 
 <script>
+  // iOS 기기 여부 감지
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
   const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyKHSxogJeVH0xu2sML3-3sSw3xpU_iCXJWJuVx_OJJQzBNEWQivsG81Q3PJEgsZJL8ow/exec';
 
   let dynamicDictionary = {
@@ -464,19 +434,23 @@
   }
 
   /* 첫 번째 코드 방식의 루비 구조 사용 (rb + rt absolute) */
-  function convertToInteractiveRuby(kanjiText, furiganaText) {
+  function convertToInteractiveRuby(kanjiText, furiganaText, sentenceIndex) {
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
     targetText = targetText.replace(/<\/?u>/gi, "").replace(/<\/?b>/gi, "").replace(/\[\[|\]\]/g, "");
 
+    const onclickAttr = isIOS 
+      ? `onclick="toggleRubyIOS(this, ${sentenceIndex})"` 
+      : `onclick="toggleRuby(this)"`;
+
     if (targetText.includes('](')) {
       targetText = targetText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, k, f) => 
-        `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rb>${k}</rb><rt class="ruby-text hidden-rt">${f}</rt></ruby>`
+        `<ruby class="interactive-ruby" ${onclickAttr}><rb>${k}</rb><rt class="ruby-text hidden-rt">${f}</rt></ruby>`
       );
     }
     targetText = targetText.replace(/([一-龠a-zA-Z0-9]+|\[[一-龠a-zA-Z0-9]+\])\[([^\]]+)\]/g, (m, k, f) => {
       const cleanK = k.replace(/[\[\]]/g, '');
-      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rb>${cleanK}</rb><rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
+      return `<ruby class="interactive-ruby" ${onclickAttr}><rb>${cleanK}</rb><rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
     });
     return targetText;
   }
@@ -581,9 +555,9 @@
         }
       }
 
-      const examples = await Promise.all(rawExamples.map(async (item) => {
+      const examples = await Promise.all(rawExamples.map(async (item, idx) => {
         const audio64 = await fetchGoogleTtsBase64(item.japanese);
-        const rubyHtml = convertToInteractiveRuby(item.japanese, item.furigana);
+        const rubyHtml = convertToInteractiveRuby(item.japanese, item.furigana, idx);
         return {
           japanese: item.japanese,
           rubyHtml,
@@ -603,35 +577,43 @@
     }
   }
 
-  /* 첫 번째 코드의 HTML 구조 적용 및 iOS 전용 재생버튼 상단 팝오버 컨테이너 추가 */
+  /* 첫 번째 코드의 HTML 구조 적용 (sentence-body span 및 숨김 방식) */
   function renderExamples(examples) {
     const container = document.getElementById('examplesContainer');
     audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
     currentIndex = -1;
 
-    container.innerHTML = examples.map((item, index) => `
-      <div class="card" id="card-${index}">
-        <div class="sentence-row">
-          <div class="text-content">
-            <div class="japanese">
-              <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index + 1}.</span>
-              <span id="sentence-${index}" class="sentence-body" style="display: none;">${item.rubyHtml}</span>
-            </div>
-            ${item.korean ? `
-              <div class="korean-container">
-                <button class="toggle-btn" onclick="toggleKorean(this, 'kor-${index}', 'word-${index}')">💡 해석</button>
-                <span id="kor-${index}" class="korean-text hidden-content">${item.korean}</span>
-                ${item.targetWord ? `<span id="word-${index}" class="word-badge hidden-content">[${item.targetWord}]</span>` : ''}
+    container.innerHTML = examples.map((item, index) => {
+      const rightActionArea = isIOS ? `
+        <div class="action-column">
+          <div id="ios-furi-${index}" class="ios-furigana-display"></div>
+          <button class="play-btn" onclick="toggleAudio(${index})">▶️ 재생</button>
+        </div>
+      ` : `
+        <button class="play-btn" onclick="toggleAudio(${index})">▶️ 재생</button>
+      `;
+
+      return `
+        <div class="card">
+          <div class="sentence-row">
+            <div class="text-content">
+              <div class="japanese">
+                <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index + 1}.</span>
+                <span id="sentence-${index}" class="sentence-body" style="display: none;">${item.rubyHtml}</span>
               </div>
-            ` : ''}
-          </div>
-          <div class="action-right">
-            <div id="ios-popover-${index}" class="ios-furigana-popover"></div>
-            <button class="play-btn" onclick="toggleAudio(${index})">▶️ 재생</button>
+              ${item.korean ? `
+                <div class="korean-container">
+                  <button class="toggle-btn" onclick="toggleKorean(this, 'kor-${index}', 'word-${index}')">💡 해석</button>
+                  <span id="kor-${index}" class="korean-text hidden-content">${item.korean}</span>
+                  ${item.targetWord ? `<span id="word-${index}" class="word-badge hidden-content">[${item.targetWord}]</span>` : ''}
+                </div>
+              ` : ''}
+            </div>
+            ${rightActionArea}
           </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
   function toggleSentence(elementId) {
@@ -644,42 +626,42 @@
     }
   }
 
+  // 비 iOS 기기용 클릭 이벤트
   function toggleRuby(rubyElem) {
     const targetRt = rubyElem.querySelector('rt');
     if (!targetRt) return;
 
-    if (isIOS) {
-      /* iOS 환경: 한자 위 대신 재생 버튼 위쪽 팝오버 공간에 후리가나 표시 */
-      const cardContainer = rubyElem.closest('.card');
-      if (!cardContainer) return;
-      const popover = cardContainer.querySelector('.ios-furigana-popover');
-      if (!popover) return;
+    const wasHidden = targetRt.classList.contains('hidden-rt');
 
-      const kanjiText = rubyElem.querySelector('rb') ? rubyElem.querySelector('rb').innerText : rubyElem.innerText;
-      const readingText = targetRt.innerText;
-      const formatted = `${kanjiText} : ${readingText}`;
+    const allRts = document.querySelectorAll('rt.ruby-text');
+    allRts.forEach(rt => rt.classList.add('hidden-rt'));
 
-      const allPopovers = document.querySelectorAll('.ios-furigana-popover');
-      allPopovers.forEach(p => {
-        if (p !== popover) p.style.display = 'none';
+    if (wasHidden) {
+      targetRt.classList.remove('hidden-rt');
+    }
+  }
+
+  // iOS 기기 전용 클릭 이벤트 (재생 버튼 상단 표시)
+  function toggleRubyIOS(rubyElem, index) {
+    const targetRt = rubyElem.querySelector('rt');
+    const displayBox = document.getElementById(`ios-furi-${index}`);
+    if (!targetRt || !displayBox) return;
+
+    const text = targetRt.textContent.trim();
+
+    // 이미 같은 단어가 표기되어 보이고 있다면 토글 off
+    if (displayBox.style.visibility === 'visible' && displayBox.textContent === text) {
+      displayBox.style.visibility = 'hidden';
+      displayBox.textContent = '';
+    } else {
+      // 모든 iOS 표시 박스 초기화
+      document.querySelectorAll('.ios-furigana-display').forEach(box => {
+        box.style.visibility = 'hidden';
+        box.textContent = '';
       });
 
-      if (popover.style.display === 'block' && popover.innerText === formatted) {
-        popover.style.display = 'none';
-      } else {
-        popover.innerText = formatted;
-        popover.style.display = 'block';
-      }
-    } else {
-      /* non-iOS 환경: 기존과 동일한 한자 상단 표시 동작 */
-      const wasHidden = targetRt.classList.contains('hidden-rt');
-
-      const allRts = document.querySelectorAll('rt.ruby-text');
-      allRts.forEach(rt => rt.classList.add('hidden-rt'));
-
-      if (wasHidden) {
-        targetRt.classList.remove('hidden-rt');
-      }
+      displayBox.textContent = text;
+      displayBox.style.visibility = 'visible';
     }
   }
 
