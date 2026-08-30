@@ -102,6 +102,7 @@
       cursor: not-allowed; 
     }
 
+    /*첫 번째 코드 스타일 이식*/
     .card {
       background: #ffffff;
       border: 1px solid #dadce0;
@@ -129,7 +130,7 @@
       font-size: 17px;
       font-weight: 400;
       color: #000000;
-      line-height: 2.2; /* 후리가나 높이까지 고려한 충분한 행간 */
+      line-height: 1.6;
       margin-top: 2px;
       margin-bottom: 4px;
       white-space: nowrap;
@@ -145,13 +146,12 @@
       padding: 0 2px;
       border-radius: 3px;
       transition: background-color 0.2s;
-      vertical-align: baseline;
     }
     .number-btn:hover {
       background-color: #e8f0fe;
     }
 
-    /* 일반 PC / Android용 absolute 후리가나 스타일 */
+    /*첫 번째 코드의 absolute 후리가나 스타일*/
     ruby.interactive-ruby {
       cursor: pointer;
       position: relative;
@@ -246,63 +246,7 @@
       font-weight: bold;
       white-space: nowrap;
     }
-
-    /* =========================================================
-       [iOS 전용 레이아웃 완벽 보정 CSS]
-       Grid 방식 기반으로 기준선(baseline) 위치 불일치 오류 해결
-       ========================================================= */
-    html.is-ios {
-      -webkit-text-size-adjust: 100%;
-    }
-
-    html.is-ios ruby.interactive-ruby {
-      display: inline-grid !important;
-      grid-template-rows: auto auto;
-      justify-items: center;
-      vertical-align: top !important; /* 수평 높이를 히라가나와 동일하게 맞춤 */
-      margin: 0 1px;
-    }
-
-    html.is-ios rb {
-      display: block !important;
-      grid-row: 2; /* 한자를 아래에 배치 */
-      font-size: 17px !important; /* 기본 폰트 크기 강제 고정 */
-      line-height: 1.2 !important;
-    }
-
-    html.is-ios rt.ruby-text {
-      display: block !important;
-      grid-row: 1; /* 후리가나를 위에 배치 */
-      position: static !important;
-      transform: none !important;
-      font-size: 10px !important;
-      line-height: 1.1 !important;
-      color: #1a73e8 !important;
-      height: 12px; /* 후리가나 영역 높이 고정 */
-      margin-bottom: 2px;
-    }
-
-    /* iOS에서 후리가나가 숨겨져 있을 때 한자 위치가 튀는 현상 방지 */
-    html.is-ios rt.hidden-rt {
-      visibility: hidden !important;
-      display: block !important;
-    }
   </style>
-
-  <!-- iOS 판별 스크립트 -->
-  <script>
-    (function() {
-      function checkIsIOS() {
-        var ua = window.navigator.userAgent.toLowerCase();
-        var isStandardIOS = /iphone|ipad|ipod/.test(ua);
-        var isIPadOS = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        return isStandardIOS || isIPadOS;
-      }
-      if (checkIsIOS()) {
-        document.documentElement.classList.add('is-ios');
-      }
-    })();
-  </script>
 </head>
 <body>
 
@@ -465,6 +409,7 @@
     }
   }
 
+  /* 첫 번째 코드 방식의 루비 구조 사용 (rb + rt absolute) */
   function convertToInteractiveRuby(kanjiText, furiganaText) {
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
@@ -604,6 +549,7 @@
     }
   }
 
+  /* 첫 번째 코드의 HTML 구조 적용 (sentence-body span 및 숨김 방식) */
   function renderExamples(examples) {
     const container = document.getElementById('examplesContainer');
     audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
