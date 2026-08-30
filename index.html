@@ -2,10 +2,19 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- iOS Safari 텍스트 크기 자동 조절 방지 및 뷰포트 고정 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>일본어 예문 & 음성 학습기</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
   <style>
+    /* iOS Safari Text Autosizing 전역 무효화 */
+    html, body {
+      -webkit-text-size-adjust: 100% !important;
+      -moz-text-size-adjust: 100% !important;
+      -ms-text-size-adjust: 100% !important;
+      text-size-adjust: 100% !important;
+    }
+
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -134,6 +143,14 @@
       margin-top: 2px;
       margin-bottom: 4px;
       white-space: nowrap;
+      -webkit-text-size-adjust: 100% !important;
+      text-size-adjust: 100% !important;
+    }
+
+    /* 텍스트 줄바꿈 시 자동 확장을 유발하는 폰트 계산 오류 방지 */
+    .japanese * {
+      -webkit-text-size-adjust: 100% !important;
+      text-size-adjust: 100% !important;
     }
 
     .number-btn {
@@ -254,8 +271,8 @@
       align-items: flex-end;
       gap: 4px;
       flex-shrink: 0;
-      -webkit-text-size-adjust: 100%;
-      text-size-adjust: 100%;
+      -webkit-text-size-adjust: 100% !important;
+      text-size-adjust: 100% !important;
     }
     .ios-furigana-display {
       font-size: 12px;
@@ -268,8 +285,8 @@
       line-height: 22px;       /* 원래 20px */
       visibility: hidden;
       white-space: nowrap;
-      -webkit-text-size-adjust: 100%;
-      text-size-adjust: 100%;
+      -webkit-text-size-adjust: 100% !important;
+      text-size-adjust: 100% !important;
     }
   </style>
 </head>
@@ -294,7 +311,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
@@ -310,7 +327,7 @@
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
-    '夜は': 'よるは', 'ピアノを弾': 'ピアノをひ', 'ギターを弾': 'ギターをひ',
+    '夜は': 'よるは', 'ピアノを弾': 'ピアノ를ひ', 'ギターを弾': 'ギターをひ',
     '道に': 'みちに', '等': 'など'
   };
 
