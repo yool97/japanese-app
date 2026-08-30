@@ -263,6 +263,7 @@
             align-items: center !important;
             vertical-align: bottom !important;
             position: relative !important;
+            transform: translateY(-3px) !important; /* 음수(-) 값을 크게 할수록 더 위로 올라갑니다 */
             margin: 0 !important;
             padding: 0 !important;
             width: auto !important;
@@ -321,7 +322,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
