@@ -125,20 +125,14 @@
       flex: 1;
       min-width: 0;
     }
-
-    /* [핵심 수정] 
-       1. <ruby> 대신 커스텀 상하 배치 flex 컨테이너 사용
-       2. 모든 글자 요소가 동일한 baseline을 가지도록 align-items: flex-end 설정
-    */
     .japanese {
       font-size: 17px;
       font-weight: 400;
       color: #000000;
+      line-height: 1.6;
       margin-top: 2px;
       margin-bottom: 4px;
-      display: inline-flex;
-      align-items: flex-end;
-      flex-wrap: wrap;
+      white-space: nowrap;
     }
 
     .number-btn {
@@ -151,42 +145,38 @@
       padding: 0 2px;
       border-radius: 3px;
       transition: background-color 0.2s;
-      line-height: 1.2;
     }
     .number-btn:hover {
       background-color: #e8f0fe;
     }
 
-    /* 한자+후리가나 조립용 컨테이너 */
-    .furi-block {
-      display: inline-flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-end;
+    ruby.interactive-ruby {
       cursor: pointer;
-      vertical-align: bottom;
+      position: relative;
+      display: inline-block;
+      vertical-align: baseline;
     }
 
-    /* 상단 후리가나 */
-    .furi-top {
+    rb {
+      letter-spacing: normal;
+      display: inline-block;
+    }
+    
+    rt.ruby-text {
+      position: absolute;
+      top: -0.85em;
+      left: 50%;
+      transform: translateX(-50%);
       font-size: 11px;
       color: #1a73e8;
       font-weight: normal;
-      line-height: 1.1;
-      height: 13px; /* 공간 고정 */
       white-space: nowrap;
-      user-select: none;
+      line-height: 1;
+      pointer-events: none;
     }
-
-    /* 하단 본문 텍스트 */
-    .furi-bottom {
-      font-size: 17px;
-      line-height: 1.2;
-    }
-
-    /* 숨김 처리 시 display:none 대신 visibility 사용으로 레이아웃 고정 */
-    .furi-top.furi-hidden {
-      visibility: hidden;
+    
+    rt.hidden-rt {
+      display: none;
     }
 
     .korean-container {
@@ -255,6 +245,60 @@
       white-space: nowrap;
     }
   </style>
+  
+  <script>
+    /* iOS 전용 정밀 보정 스크립트 */
+    (function() {
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+      if (isIOS) {
+        var iosStyle = document.createElement('style');
+        iosStyle.type = 'text/css';
+        iosStyle.innerHTML = `
+          /* iOS 상하 2단 공간 고정 및 Baseline 복완 */
+          ruby.interactive-ruby {
+            display: inline-flex !important;
+            flex-direction: column-reverse !important;
+            align-items: center !important;
+            vertical-align: bottom !important;
+            position: relative !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: auto !important;
+          }
+
+          rb {
+            display: inline-block !important;
+            line-height: 1.2 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          rt.ruby-text {
+            position: static !important;
+            transform: none !important;
+            display: block !important;
+            visibility: visible !important;
+            font-size: 11px !important;
+            line-height: 1.2 !important;
+            height: 1.2em !important;
+            color: #1a73e8 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            text-align: center !important;
+          }
+
+          /* 공간은 고정하되 후리가나만 감춤 */
+          rt.hidden-rt {
+            display: block !important;
+            visibility: hidden !important;
+          }
+        `;
+        document.head.appendChild(iosStyle);
+      }
+    })();
+  </script>
 </head>
 <body>
 
@@ -277,7 +321,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
@@ -416,49 +460,21 @@
     }
   }
 
-  /* [핵심 파싱 수정]
-     기본 <ruby> 태그를 생성하지 않고, 상하 분리형 커스텀 <div> 구조로 파싱합니다.
-  */
   function convertToInteractiveRuby(kanjiText, furiganaText) {
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
     targetText = targetText.replace(/<\/?u>/gi, "").replace(/<\/?b>/gi, "").replace(/\[\[|\]\]/g, "");
 
-    let htmlResult = "";
-    
-    // 패턴 분리 (한자[후리가나] 또는 [한자](후리가나))
-    const regex = /(\[([^\]]+)\]\(([^)]+)\)|([一-龠a-zA-Z0-9]+|\[[一-龠a-zA-Z0-9]+\])\[([^\]]+)\]|[^\[\(\n]+)/g;
-    let match;
-
-    while ((match = regex.exec(targetText)) !== null) {
-      const fullMatch = match[0];
-      
-      if (match[2] && match[3]) { 
-        // [한자](후리가나) 형태
-        const kanji = match[2];
-        const furi = match[3];
-        htmlResult += createFuriBlock(kanji, furi);
-      } else if (match[4] && match[5]) { 
-        // 한자[후리가나] 형태
-        const kanji = match[4].replace(/[\[\]]/g, '');
-        const furi = match[5];
-        htmlResult += createFuriBlock(kanji, furi);
-      } else {
-        // 일반 히라가나/가타카나/기호
-        htmlResult += createFuriBlock(fullMatch, "");
-      }
+    if (targetText.includes('](')) {
+      targetText = targetText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, k, f) => 
+        `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rb>${k}</rb><rt class="ruby-text hidden-rt">${f}</rt></ruby>`
+      );
     }
-
-    return htmlResult;
-  }
-
-  /* 커스텀 블록 생성 함수 */
-  function createFuriBlock(text, furi) {
-    if (!furi) {
-      // 후리가나가 없는 일반 글자도 높이 축을 맞추기 위해 상단 빈공간 보장
-      return `<span class="furi-block"><span class="furi-top furi-hidden">&nbsp;</span><span class="furi-bottom">${text}</span></span>`;
-    }
-    return `<span class="furi-block" onclick="toggleRuby(this)"><span class="furi-top furi-hidden">${furi}</span><span class="furi-bottom">${text}</span></span>`;
+    targetText = targetText.replace(/([一-龠a-zA-Z0-9]+|\[[一-龠a-zA-Z0-9]+\])\[([^\]]+)\]/g, (m, k, f) => {
+      const cleanK = k.replace(/[\[\]]/g, '');
+      return `<ruby class="interactive-ruby" onclick="toggleRuby(this)"><rb>${cleanK}</rb><rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
+    });
+    return targetText;
   }
 
   async function processWords(isRandomMode) {
@@ -614,26 +630,23 @@
     const target = document.getElementById(elementId);
     if (!target) return;
     if (target.style.display === 'none' || target.style.display === '') {
-      target.style.display = 'inline-flex';
+      target.style.display = 'inline';
     } else {
       target.style.display = 'none';
     }
   }
 
-  /* 클릭 이벤트 제어 */
-  function toggleRuby(blockElem) {
-    const topElem = blockElem.querySelector('.furi-top');
-    if (!topElem) return;
+  function toggleRuby(rubyElem) {
+    const targetRt = rubyElem.querySelector('rt');
+    if (!targetRt) return;
 
-    const wasHidden = topElem.classList.contains('furi-hidden');
+    const wasHidden = targetRt.classList.contains('hidden-rt');
 
-    // 다른 모든 후리가나 숨기기
-    const allTops = document.querySelectorAll('.furi-top');
-    allTops.forEach(el => el.classList.add('furi-hidden'));
+    const allRts = document.querySelectorAll('rt.ruby-text');
+    allRts.forEach(rt => rt.classList.add('hidden-rt'));
 
-    // 토글 동작 (visibility만 제어하므로 레이아웃 변경 없음)
     if (wasHidden) {
-      topElem.classList.remove('furi-hidden');
+      targetRt.classList.remove('hidden-rt');
     }
   }
 
