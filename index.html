@@ -102,7 +102,6 @@
       cursor: not-allowed; 
     }
 
-    /*첫 번째 코드 스타일 이식*/
     .card {
       background: #ffffff;
       border: 1px solid #dadce0;
@@ -130,7 +129,7 @@
       font-size: 17px;
       font-weight: 400;
       color: #000000;
-      line-height: 1.6;
+      line-height: 2.2; /* 후리가나 높이까지 고려한 충분한 행간 */
       margin-top: 2px;
       margin-bottom: 4px;
       white-space: nowrap;
@@ -146,12 +145,13 @@
       padding: 0 2px;
       border-radius: 3px;
       transition: background-color 0.2s;
+      vertical-align: baseline;
     }
     .number-btn:hover {
       background-color: #e8f0fe;
     }
 
-    /*첫 번째 코드의 absolute 후리가나 스타일*/
+    /* 일반 PC / Android용 absolute 후리가나 스타일 */
     ruby.interactive-ruby {
       cursor: pointer;
       position: relative;
@@ -248,45 +248,43 @@
     }
 
     /* =========================================================
-       [iOS 전용 레이아웃 보정 CSS]
-       iOS 감지 시 폰트 변형 및 후리가나 겹침 방지
+       [iOS 전용 레이아웃 완벽 보정 CSS]
+       Grid 방식 기반으로 기준선(baseline) 위치 불일치 오류 해결
        ========================================================= */
     html.is-ios {
       -webkit-text-size-adjust: 100%;
     }
 
-    html.is-ios .japanese {
-      line-height: 2.1; /* 후리가나 영역 공간 확보 */
-    }
-
     html.is-ios ruby.interactive-ruby {
-      display: inline-flex !important;
-      flex-direction: column-reverse !important;
-      vertical-align: bottom !important;
-      align-items: center !important;
-      position: relative !important;
+      display: inline-grid !important;
+      grid-template-rows: auto auto;
+      justify-items: center;
+      vertical-align: top !important; /* 수평 높이를 히라가나와 동일하게 맞춤 */
       margin: 0 1px;
     }
 
     html.is-ios rb {
       display: block !important;
-      font-size: 17px !important; /* 한자 크기 원본 고정 */
+      grid-row: 2; /* 한자를 아래에 배치 */
+      font-size: 17px !important; /* 기본 폰트 크기 강제 고정 */
       line-height: 1.2 !important;
     }
 
     html.is-ios rt.ruby-text {
+      display: block !important;
+      grid-row: 1; /* 후리가나를 위에 배치 */
       position: static !important;
       transform: none !important;
-      display: block !important;
       font-size: 10px !important;
       line-height: 1.1 !important;
       color: #1a73e8 !important;
-      margin-bottom: 2px !important; /* 한자와 겹치지 않게 여백 추가 */
-      height: 11px; /* 위치 변동 방지용 높이 고정 */
+      height: 12px; /* 후리가나 영역 높이 고정 */
+      margin-bottom: 2px;
     }
 
+    /* iOS에서 후리가나가 숨겨져 있을 때 한자 위치가 튀는 현상 방지 */
     html.is-ios rt.hidden-rt {
-      visibility: hidden !important; /* iOS에서 display:none 시 한자 위치 흔들림 방지 */
+      visibility: hidden !important;
       display: block !important;
     }
   </style>
@@ -327,7 +325,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
@@ -467,7 +465,6 @@
     }
   }
 
-  /* 첫 번째 코드 방식의 루비 구조 사용 (rb + rt absolute) */
   function convertToInteractiveRuby(kanjiText, furiganaText) {
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
@@ -607,7 +604,6 @@
     }
   }
 
-  /* 첫 번째 코드의 HTML 구조 적용 (sentence-body span 및 숨김 방식) */
   function renderExamples(examples) {
     const container = document.getElementById('examplesContainer');
     audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
