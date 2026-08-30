@@ -261,7 +261,7 @@
             display: inline-flex !important;
             flex-direction: column-reverse !important;
             align-items: center !important;
-            vertical-align: 4px !important; /* 한자 높이 수정. 원래는 bottom */
+            vertical-align: top !important; /* 한자 높이 수정. 원래는 bottom */
             position: relative !important;
             margin: 0 !important;
             padding: 0 !important;
@@ -321,7 +321,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
