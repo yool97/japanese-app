@@ -254,6 +254,8 @@
       align-items: flex-end;
       gap: 4px;
       flex-shrink: 0;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
     }
     .ios-furigana-display {
       font-size: 12px;
@@ -266,6 +268,8 @@
       line-height: 22px;       /* 원래 20px */
       visibility: hidden;
       white-space: nowrap;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
     }
   </style>
 </head>
@@ -290,7 +294,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
