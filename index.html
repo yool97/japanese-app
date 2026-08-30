@@ -2,11 +2,18 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>일본어 예문 & 음성 학습기</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+  
   <style>
-    * { box-sizing: border-box; }
+    /* ==========================================
+       [공통 기본 스타일]
+       ========================================== */
+    * { 
+      box-sizing: border-box; 
+      -webkit-tap-highlight-color: transparent; /* 터치 잔상 제거 */
+    }
     body {
       margin: 0;
       padding: 16px;
@@ -32,220 +39,80 @@
       margin-bottom: 20px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    .key-config {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
+    .key-config { display: flex; gap: 8px; margin-bottom: 12px; }
     .key-config input {
-      flex: 1;
-      padding: 8px;
-      border: 1px solid #dadce0;
-      border-radius: 6px;
-      font-size: 13px;
+      flex: 1; padding: 8px; border: 1px solid #dadce0; border-radius: 6px; font-size: 13px;
     }
     .key-config button {
-      background-color: #5f6368;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
+      background-color: #5f6368; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
     }
-    .input-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
+    .input-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .reload-btn {
-      background-color: #f1f3f4;
-      color: #3c4043;
-      border: 1px solid #dadce0;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      background-color: #f1f3f4; color: #3c4043; border: 1px solid #dadce0; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;
     }
-    .reload-btn:hover {
-      background-color: #e8eaed;
-    }
+    .reload-btn:hover { background-color: #e8eaed; }
     textarea {
-      width: 100%;
-      height: 120px;
-      padding: 10px;
-      border: 1px solid #dadce0;
-      border-radius: 6px;
-      font-size: 15px;
-      resize: vertical;
-      margin-bottom: 12px;
+      width: 100%; height: 120px; padding: 10px; border: 1px solid #dadce0; border-radius: 6px; font-size: 15px; resize: vertical; margin-bottom: 12px;
     }
     .btn-group { display: flex; gap: 10px; }
     button.main-btn {
-      flex: 1;
-      background-color: #1a73e8;
-      color: #ffffff;
-      border: none;
-      padding: 12px;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: bold;
-      cursor: pointer;
+      flex: 1; background-color: #1a73e8; color: #ffffff; border: none; padding: 12px; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer;
     }
-    button.main-btn:disabled { 
-      background-color: #bdc1c6 !important; 
-      cursor: not-allowed; 
-    }
+    button.main-btn:disabled { background-color: #bdc1c6 !important; cursor: not-allowed; }
 
-    /*첫 번째 코드 스타일 이식*/
     .card {
-      background: #ffffff;
-      border: 1px solid #dadce0;
-      border-left: 4px solid #1a73e8;
-      border-radius: 6px;
-      padding: 10px 12px;
-      margin-bottom: 8px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-      box-sizing: border-box;
+      background: #ffffff; border: 1px solid #dadce0; border-left: 4px solid #1a73e8; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); box-sizing: border-box;
     }
-    .card:last-child {
-      margin-bottom: 2px;
-    }
-    .sentence-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-    .text-content {
-      flex: 1;
-      min-width: 0;
-    }
-    .japanese {
-      font-size: 17px;
-      font-weight: 400;
-      color: #000000;
-      line-height: 1.6;
-      margin-top: 2px;
-      margin-bottom: 4px;
-      white-space: nowrap;
-    }
+    .card:last-child { margin-bottom: 2px; }
+    .sentence-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .text-content { flex: 1; min-width: 0; }
+    .japanese { font-size: 17px; font-weight: 400; color: #000000; line-height: 1.6; margin-top: 2px; margin-bottom: 4px; white-space: nowrap; }
+    .number-btn { cursor: pointer; font-weight: bold; color: #1a73e8; user-select: none; display: inline-block; margin-right: 4px; padding: 0 2px; border-radius: 3px; transition: background-color 0.2s; }
+    .number-btn:hover { background-color: #e8f0fe; }
 
-    .number-btn {
-      cursor: pointer;
-      font-weight: bold;
-      color: #1a73e8;
-      user-select: none;
-      display: inline-block;
-      margin-right: 4px;
-      padding: 0 2px;
-      border-radius: 3px;
-      transition: background-color 0.2s;
-    }
-    .number-btn:hover {
-      background-color: #e8f0fe;
-    }
+    ruby.interactive-ruby { cursor: pointer; position: relative; display: inline-block; vertical-align: baseline; }
+    rb { letter-spacing: normal; display: inline-block; }
+    rt.ruby-text { position: absolute; top: -0.85em; left: 50%; transform: translateX(-50%); font-size: 11px; color: #1a73e8; font-weight: normal; white-space: nowrap; line-height: 1; pointer-events: none; }
+    rt.hidden-rt { display: none; }
 
-    /*첫 번째 코드의 absolute 후리가나 스타일*/
-    ruby.interactive-ruby {
-      cursor: pointer;
-      position: relative;
-      display: inline-block;
-      vertical-align: baseline;
-    }
+    .korean-container { margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+    .korean-text { font-size: 13px; color: #3c4043; }
+    .word-badge { font-size: 13px; color: #d93025; font-weight: bold; }
+    .hidden-content { display: none !important; }
 
-    rb {
-      letter-spacing: normal;
-      display: inline-block;
-    }
-    
-    rt.ruby-text {
-      position: absolute;
-      top: -0.85em;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 11px;
-      color: #1a73e8;
-      font-weight: normal;
-      white-space: nowrap;
-      line-height: 1;
-      pointer-events: none;
-    }
-    
-    rt.hidden-rt {
-      display: none;
-    }
+    .toggle-btn { border: 1px solid #dadce0; background-color: #f1f3f4; color: #3c4043; padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .toggle-btn:hover { background-color: #e8eaed; }
+    .play-btn { border: none; background-color: #e8f0fe; color: #1a73e8; padding: 8px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background-color 0.2s; flex-shrink: 0; }
+    .play-btn:hover { background-color: #d2e3fc; }
+    .play-btn.playing { background-color: #fce8e6; color: #d93025; }
+    .model-badge { background-color: #e8f0fe; color: #1a73e8; border: 1px solid #aecbfa; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; white-space: nowrap; }
 
-    .korean-container {
-      margin-top: 6px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+    /* ==========================================
+       [iOS 전용 커스텀 스타일 Override]
+       ========================================== */
+    body.is-ios {
+      background-color: #f2f2f7; /* iOS 그룹화 배경색 */
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Hiragino Sans", sans-serif;
+      padding-top: max(16px, env(safe-area-inset-top)); /* 노치/상단바 대응 */
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+      -webkit-overflow-scrolling: touch;
     }
-    .korean-text {
-      font-size: 13px;
-      color: #3c4043;
-    }
-    .word-badge {
-      font-size: 13px;
-      color: #d93025;
-      font-weight: bold;
-    }
-    .hidden-content {
-      display: none !important;
-    }
-
-    .toggle-btn {
-      border: 1px solid #dadce0;
-      background-color: #f1f3f4;
-      color: #3c4043;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s;
-    }
-    .toggle-btn:hover {
-      background-color: #e8eaed;
-    }
-
-    .play-btn {
+    body.is-ios .header { color: #007aff; }
+    body.is-ios .card-input, body.is-ios .card {
       border: none;
-      background-color: #e8f0fe;
-      color: #1a73e8;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: background-color 0.2s;
-      flex-shrink: 0;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
-    .play-btn:hover {
-      background-color: #d2e3fc;
+    body.is-ios button.main-btn {
+      background-color: #007aff;
+      border-radius: 10px;
     }
-    .play-btn.playing {
-      background-color: #fce8e6;
-      color: #d93025;
+    body.is-ios .play-btn {
+      background-color: #e5f1ff;
+      color: #007aff;
+      border-radius: 8px;
     }
-
-    .model-badge {
-      background-color: #e8f0fe;
-      color: #1a73e8;
-      border: 1px solid #aecbfa;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 10px;
-      font-weight: bold;
-      white-space: nowrap;
-    }
+    body.is-ios rt.ruby-text { color: #007aff; }
   </style>
 </head>
 <body>
@@ -278,6 +145,41 @@
 </div>
 
 <script>
+  // ==========================================
+  // [OS 감지 로직]
+  // ==========================================
+  function isIOS() {
+    return /iPhone|iPad|iPod/i.test(navigator.userAgent) || 
+           (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  // 페이지 로드 시 OS 판별 후 분기 실행
+  window.addEventListener('DOMContentLoaded', () => {
+    if (isIOS()) {
+      document.body.classList.add('is-ios');
+      initIOSApp();
+    } else {
+      initDefaultApp();
+    }
+  });
+
+  // iOS 환경 초기화
+  function initIOSApp() {
+    console.log("📱 iOS 환경이 감지되었습니다. iOS 전용 기능 및 스타일을 적용합니다.");
+    const savedKey = getApiKey();
+    if (savedKey) document.getElementById('apiKeyInput').value = savedKey;
+  }
+
+  // 기타 OS(Android, PC 등) 환경 초기화
+  function initDefaultApp() {
+    console.log("💻 Android/PC 환경이 감지되었습니다.");
+    const savedKey = getApiKey();
+    if (savedKey) document.getElementById('apiKeyInput').value = savedKey;
+  }
+
+  // ==========================================
+  // [기존 학습기 로직]
+  // ==========================================
   const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyKHSxogJeVH0xu2sML3-3sSw3xpU_iCXJWJuVx_OJJQzBNEWQivsG81Q3PJEgsZJL8ow/exec';
 
   let dynamicDictionary = {
@@ -328,7 +230,6 @@
 
       if (data.dictionary && typeof data.dictionary === 'object') {
         dynamicDictionary = data.dictionary;
-        console.log("시트 동적 사전 불러오기 성공:", dynamicDictionary);
       }
     } catch (e) {
       console.error("스프레드시트 연동 오류:", e);
@@ -339,13 +240,6 @@
     }
   }
 
-  window.addEventListener('DOMContentLoaded', () => {
-    const savedKey = getApiKey();
-    if (savedKey) {
-      document.getElementById('apiKeyInput').value = savedKey;
-    }
-  });
-
   async function callGeminiAPI(prompt, temperature = 0.85) {
     const apiKey = getApiKey();
     if (!apiKey) {
@@ -354,8 +248,7 @@
     }
 
     const models = [
-     // { name: 'gemini-3.7-flash', label: '3.7' },
-      { name: 'gemini-3.6-flash', label: '3.6' }
+      { name: 'gemini-1.5-flash', label: 'Flash' }
     ];
     let lastErrorMessage = "";
 
@@ -409,7 +302,6 @@
     }
   }
 
-  /* 첫 번째 코드 방식의 루비 구조 사용 (rb + rt absolute) */
   function convertToInteractiveRuby(kanjiText, furiganaText) {
     let targetText = furiganaText || kanjiText;
     if (!targetText) return "";
@@ -549,7 +441,6 @@
     }
   }
 
-  /* 첫 번째 코드의 HTML 구조 적용 (sentence-body span 및 숨김 방식) */
   function renderExamples(examples) {
     const container = document.getElementById('examplesContainer');
     audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
@@ -580,11 +471,7 @@
   function toggleSentence(elementId) {
     const target = document.getElementById(elementId);
     if (!target) return;
-    if (target.style.display === 'none' || target.style.display === '') {
-      target.style.display = 'inline';
-    } else {
-      target.style.display = 'none';
-    }
+    target.style.display = (target.style.display === 'none' || target.style.display === '') ? 'inline' : 'none';
   }
 
   function toggleRuby(rubyElem) {
@@ -609,8 +496,8 @@
       korTarget.classList.remove('hidden-content');
       if (wordTarget) wordTarget.classList.remove('hidden-content');
       button.textContent = '💡 해석';
-      button.style.backgroundColor = '#e8f0fe';
-      button.style.color = '#1a73e8';
+      button.style.backgroundColor = isIOS() ? '#e5f1ff' : '#e8f0fe';
+      button.style.color = isIOS() ? '#007aff' : '#1a73e8';
     } else {
       korTarget.classList.add('hidden-content');
       if (wordTarget) wordTarget.classList.add('hidden-content');
