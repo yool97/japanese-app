@@ -307,6 +307,14 @@
       -webkit-text-size-adjust: 100% !important;
       text-size-adjust: 100% !important;
     }
+
+    .btn-group { display:flex; gap:6px; }
+    .btn-group .main-btn { flex:1; min-width:0; }
+    .voice-buttons { display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
+    .dialogue-title { font-weight:bold; color:#5f6368; font-size:13px; margin-bottom:8px; }
+    .dialogue-turn { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:7px 0; border-top:1px solid #eee; }
+    .dialogue-turn:first-of-type { border-top:none; }
+    .dialogue-text { flex:1; min-width:0; }
   </style>
 </head>
 <body>
@@ -330,8 +338,9 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5 문장</button>
-      <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
+      <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
+      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">문장</button>
+      <button class="main-btn" id="btnDialogue" onclick="processWords('dialogue')" style="background-color: #34a853;">대화</button>
     </div>
   </div>
 
@@ -351,8 +360,11 @@
   };
 
   let audioList = [];
+  let voicevoxAudioList = [];
   let currentIndex = -1;
+  let currentVoice = '';
   let exampleJapaneseTexts = [];
+  let exampleSpeakers = [];
 
   function getApiKey() {
     return localStorage.getItem('GEMINI_API_KEY') || '';
@@ -585,7 +597,7 @@
     return html;
   }
 
-  async function processWords(isRandomMode) {
+  async function processWords(mode) {
     const rawInput = document.getElementById('inputText').value.trim();
     if (!rawInput) {
       alert("단어를 입력하거나 불러온 후 실행해 주세요.");
@@ -593,259 +605,189 @@
     }
 
     const words = rawInput.split('\n').map(w => w.trim()).filter(w => w !== "");
-    const btn1 = document.getElementById('btnSingle');
-    const btn2 = document.getElementById('btnRandom');
-
-    btn1.disabled = true;
-    btn2.disabled = true;
+    const buttons = [
+      document.getElementById('btnFive'),
+      document.getElementById('btnSentence'),
+      document.getElementById('btnDialogue')
+    ];
+    buttons.forEach(btn => { if (btn) btn.disabled = true; });
 
     let prompt = "";
-    let totalSentences = 0;
-
-    /*
-     * 현재 Google Apps Script의 예문 생성 형식과 동일하게 처리합니다.
-     *
-     * 1줄: 일본어 문장. 대상 부분은 [[...]]
-     * 2줄: 후리가나
-     * 3줄: 직역에 가까운 한국어
-     * 4줄: 자연스러운 한국어
-     *
-     * 모바일 화면은 기존 레이아웃을 유지하므로 3줄째(직역)를
-     * 기존 한국어 표시 영역에 사용하고, 대상 단어는 일본어의
-     * [[...]]에서 자동으로 추출합니다.
-     */
+    let totalSets = 0;
 
     const commonRules = `
 [예문 작성 규칙 - 매우 중요]:
 1. 문장의 시작 부분이나 어조가 서로 중복되거나 비슷하지 않게 다양화하세요.
-2. 기초적인 단어들로 이루어진, 매우 쉬우면서, 실생활에서 자주 쓰이는 완성도 높은 문장으로 만드세요.
-3. 한자는 현대 일본인들이 실생활에서 두루 사용하는 표준 상용한자 위주로 쓰고, 난해하거나 잘 쓰이지 않는 한자는 피하세요.
-4. 시간·수량의 '10분'은 숫자로 10分으로 표기하고, '충분'은 한자 十分으로 표기
-5. TTS 엔진이 읽을 때 문맥 판단 오류가 자주 발생하는 한자는 가급적 히라가나로 쓰거나, 숫자를 명확히 명시할 것
-   (예: 一人는 ひとり 아니면 1人로, 一日は ついたち 아니면 1日로)
-6. 문장의 어조는 존댓말(丁寧語), 반말(タメ口), 실생활 대화체를 고르게 섞어서 다양하게 구성하세요.
-7. 일본어 문장에는 일본어 이외의 문자가 섞이지 않도록 하세요.
+2. 기초적인 단어들로 이루어진, 쉬우면서 실생활에서 자주 쓰이는 완성도 높은 일본어를 만드세요.
+3. 한자는 현대 일본인이 실생활에서 두루 사용하는 표준 상용한자 위주로 쓰세요.
+4. TTS가 읽을 때 혼동하기 쉬운 한자는 가급적 히라가나 또는 숫자를 명확히 사용하세요.
+5. 존댓말, 반말, 실생활 대화체를 자연스럽게 섞어 표현을 다양화하세요.
+6. 일본어 문장에는 일본어 이외의 문자가 섞이지 않게 하세요.
 
-[후리가나 표기 규칙 - 매우 중요]:
-- 일본어 문장에 포함된 모든 한자에는 반드시 후리가나를 빠짐없이 붙이세요.
-- 한자가 연속해서 하나의 단어를 이루는 경우, 반드시 단어 전체를 하나의 []로 묶고 그 단어 전체의 발음을 하나의 () 안에 적으세요.
-- 절대로 단어의 일부 한자에만 후리가나를 붙이지 마세요.
+[후리가나 표기 규칙]:
+- 일본어 문장의 모든 한자에는 후리가나를 붙이세요.
+- 하나의 단어는 전체를 하나의 []로 묶고 발음 전체를 하나의 ()에 적으세요.
 - 예: 正直 → [正直](しょうじき)
-- 잘못된 예: [正](しょう)直
-- 잘못된 예: 正[直](じき)
-- 활용형의 경우에도 한자 부분 전체에 정확한 후리가나를 붙이세요.
 - 예: 伝えます → [伝](つた)えます
-- 예: 理由 → [理由](りゆう)
-- 예: 本当に → [本当](ほんとう)に
-- 히라가나/가타카나/조사/공백 등 한자가 아닌 부분은 괄호 없이 그대로 둡니다.
 - 후리가나 줄에는 [[...]]를 넣지 마세요.
 
-[대상 부분 지정 규칙 - 매우 중요]:
-- 일본어 문장에서 대상 부분 전체를 정확히 [[...]]로 감싸세요.
-- 문법의 어미나 뒷부분만 감싸지 말고, 그 문법이 붙은 단어의 시작부터 실제 대상 표현 전체를 감싸세요.
-- 예: このパソコンは[[軽くなければならない]]。
-- 예: この部屋は[[静かではいけない]]。
-- [[...]]는 일본어 문장 한 곳에 정확히 한 번만 사용하세요.
-- 대상 부분을 별도의 줄에 다시 출력하지 마세요.
+[대상 부분 지정 규칙]:
+- 일본어 문장의 대상 부분 전체를 [[...]]로 정확히 한 번 감싸세요.
 `;
 
-    if (!isRandomMode) {
-      const targetWord = words[0];
-      totalSentences = 5;
-
-      prompt = `다음 입력 '${targetWord}'를 기준으로 서로 다른 맥락의 자연스러운 일본어 예문 5개를 만드세요.
-
-'${targetWord}'가 단어인지 활용형인지 문법적 형태인지 구분하지 말고,
+    if (mode === 'five') {
+      totalSets = 5;
+      prompt = `다음 입력 '${words[0]}' 하나를 사용하여 서로 다른 맥락의 자연스러운 일본어 예문 5개를 만드세요.
 입력 자체를 문맥에 맞게 자연스럽게 사용하세요.
-
 ${commonRules}
-
-[출력 형식 규칙 - 매우 중요]:
-번호, 머리말, 인사말, 추가 설명을 전혀 넣지 말고 정확히 20줄(5세트 × 4줄)로만 출력하세요.
-
-각 세트는 반드시 아래 4줄 순서입니다.
-1줄: 일본어 문장
-2줄: 후리가나 표기
-3줄: 직역에 가까운 한국어 문장
-4줄: 일본어의 실제 의미와 뉘앙스를 살린 자연스러운 한국어 문장
-
-3줄째와 4줄째는 의미상 동일해야 하며, 4줄째에서 새로운 정보나 의미를 추가하지 마세요.`;
-
+[출력 형식]
+정확히 20줄만 출력하세요. 각 세트는 4줄입니다.
+1줄 일본어 문장
+2줄 후리가나
+3줄 직역에 가까운 한국어
+4줄 자연스러운 한국어
+`;
+    } else if (mode === 'sentence') {
+      const count = words.length;
+      if (count === 1) {
+        totalSets = 3;
+        prompt = `다음 1개의 입력 '${words[0]}'를 활용하여 총 3개의 자연스러운 일본어 예문을 만드세요.`;
+      } else if (count === 2) {
+        totalSets = 4;
+        prompt = `다음 2개의 입력 '${words[0]}'와 '${words[1]}'를 각각 2개씩 활용하여 총 4개의 자연스러운 일본어 예문을 만드세요.`;
+      } else {
+        totalSets = count;
+        prompt = `다음 ${count}개의 입력을 각각 1개씩 활용하여 총 ${count}개의 자연스러운 일본어 예문을 만드세요.\n입력 목록:\n${words.map((w,i)=>`${i+1}. ${w}`).join('\n')}`;
+      }
+      prompt += `\n각 입력 자체를 문맥에 맞게 자연스럽게 사용하세요.\n${commonRules}\n[출력 형식]\n정확히 ${totalSets*4}줄만 출력하세요. 각 세트는 4줄입니다.\n1줄 일본어 문장\n2줄 후리가나\n3줄 직역에 가까운 한국어\n4줄 자연스러운 한국어\n`;
     } else {
       const count = words.length;
-
-      if (count === 1) {
-        totalSentences = 3;
-        prompt = `다음 1개의 입력 '${words[0]}'를 기준으로 서로 다른 맥락의 자연스러운 일본어 예문 3개를 만드세요.
-
-'${words[0]}'가 단어인지 활용형인지 문법적 형태인지 구분하지 말고,
-입력 자체를 문맥에 맞게 자연스럽게 사용하세요.`;
-      } else if (count === 2) {
-        totalSentences = 4;
-        prompt = `다음 2개의 입력 '${words[0]}'와 '${words[1]}'를 각각 활용하여 총 4개의 자연스러운 일본어 예문을 만드세요.
-각 입력당 2개씩 만들고, 문장 순서는 적절히 섞어도 됩니다.
-
-각 입력이 단어인지 활용형인지 문법적 형태인지 구분하지 말고,
-입력 자체를 문맥에 맞게 자연스럽게 사용하세요.`;
-      } else {
-        totalSentences = count;
-        prompt = `다음 ${count}개의 입력을 각각 활용하여 총 ${count}개의 자연스러운 일본어 예문을 만드세요.
-각 입력당 1개씩 만들고, 문장 순서는 적절히 섞어도 됩니다.
-
-입력 목록:
-${words.map((w, i) => `${i + 1}. ${w}`).join('\n')}
-
-각 입력이 단어인지 활용형인지 문법적 형태인지 구분하지 말고,
-입력 자체를 문맥에 맞게 자연스럽게 사용하세요.`;
-      }
-
-      prompt += `
-
-${commonRules}
-
-[출력 형식 규칙 - 매우 중요]:
-번호, 머리말, 인사말, 추가 설명을 전혀 넣지 말고 정확히 ${totalSentences * 4}줄로만 출력하세요.
-
-각 세트는 반드시 아래 4줄 순서입니다.
-1줄: 일본어 문장
-2줄: 후리가나 표기
-3줄: 직역에 가까운 한국어 문장
-4줄: 일본어의 실제 의미와 뉘앙스를 살린 자연스러운 한국어 문장
-
-3줄째와 4줄째는 의미상 동일해야 하며, 4줄째에서 새로운 정보나 의미를 추가하지 마세요.`;
+      totalSets = count === 1 ? 3 : count === 2 ? 4 : count;
+      const inputText = words.map((w,i)=>`${i+1}. ${w}`).join('\n');
+      prompt = `다음 입력을 활용해 실제 일본어 회화처럼 자연스러운 2인 대화 ${totalSets}세트를 만드세요.\n입력 목록:\n${inputText}\n`;
+      prompt += `각 세트는 서로 다른 상황과 표현을 사용하세요. 각 세트에는 두 사람이 한 번씩 말하는 2개의 일본어 대사가 있어야 합니다. 입력된 표현은 대화의 핵심이 되도록 자연스럽게 사용하세요.\n${commonRules}\n[대화 출력 형식 - 매우 중요]\n정확히 ${totalSets*8}줄만 출력하세요. 각 세트는 8줄입니다.\n1줄 첫 번째 사람의 일본어 대사\n2줄 첫 번째 대사의 후리가나\n3줄 첫 번째 대사의 직역에 가까운 한국어\n4줄 첫 번째 대사의 자연스러운 한국어\n5줄 두 번째 사람의 일본어 대사\n6줄 두 번째 대사의 후리가나\n7줄 두 번째 대사의 직역에 가까운 한국어\n8줄 두 번째 대사의 자연스러운 한국어\n`;
     }
 
     try {
       const json = await callGeminiAPI(prompt, 0.85);
-
       if (!json || json.error) {
-        if (json?.error?.message !== "API 키 없음") {
-          alert(`⚠️ API 오류 발생:\n${json?.error?.message || "응답을 받지 못했습니다."}`);
-        }
+        alert(`⚠️ API 오류 발생:\n${json?.error?.message || "응답을 받지 못했습니다."}`);
         return;
       }
-
       const badge = document.getElementById('modelBadge');
       badge.innerText = `Gemini ${json.usedModel || ""}`;
       badge.style.display = 'inline-block';
+      const generatedText = json?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (!generatedText) throw new Error("Gemini 응답에 예문 내용이 없습니다.");
 
-      const generatedText =
-        json?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      const lines = generatedText.split(/\r?\n/).map(l => l.replace(/^\s*\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+      const examples = [];
 
-      if (!generatedText) {
-        throw new Error("Gemini 응답에 예문 내용이 없습니다.");
+      if (mode === 'dialogue') {
+        for (let i=0; i+7<lines.length; i+=8) {
+          const aJ = lines[i], aF = lines[i+1], aK = lines[i+3];
+          const bJ = lines[i+4], bF = lines[i+5], bK = lines[i+7];
+          examples.push({
+            dialogue: true,
+            turns: [
+              { japanese:aJ.replace(/\[\[|\]\]/g,''), rubyHtml:convertToInteractiveRuby(aJ,aF,examples.length*2), korean:aK },
+              { japanese:bJ.replace(/\[\[|\]\]/g,''), rubyHtml:convertToInteractiveRuby(bJ,bF,examples.length*2+1), korean:bK }
+            ]
+          });
+        }
+      } else {
+        for (let i=0; i+3<lines.length; i+=4) {
+          const japaneseWithMarker = lines[i];
+          const markerMatch = japaneseWithMarker.match(/\[\[([\s\S]*?)\]\]/);
+          if (!markerMatch) continue;
+          examples.push({
+            japanese: japaneseWithMarker.replace(/\[\[|\]\]/g,''),
+            rubyHtml: convertToInteractiveRuby(japaneseWithMarker, lines[i+1], i/4),
+            korean: lines[i+2] || '',
+            targetWord: markerMatch[1]
+          });
+        }
       }
-
-      const lines = generatedText
-        .split(/\r?\n/)
-        .map(l => l.replace(/^\s*\d+[\.\)]\s*/, '').trim())
-        .filter(l => l !== "");
-
-      const rawExamples = [];
-
-      for (let i = 0; i + 3 < lines.length; i += 4) {
-        let japaneseWithMarker = lines[i];
-
-        // 일본어 본문에 실수로 후리가나 표기가 들어온 경우 제거합니다.
-        japaneseWithMarker = japaneseWithMarker
-          .replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, '$1');
-
-        const markerMatch = japaneseWithMarker.match(/\[\[([\s\S]*?)\]\]/);
-
-        // 현재 GAS와 동일하게 [[...]]가 없는 응답은 임의로 대상 단어를 추측하지 않습니다.
-        if (!markerMatch) continue;
-
-        const targetWord = markerMatch[1];
-        // [[...]]를 유지한 일본어를 저장합니다.
-        // 화면에서는 블라인드 범위를 만들고, TTS 요청 시에만 기호를 제거합니다.
-        const japanese = japaneseWithMarker;
-
-        const furigana = lines[i + 1] || japanese;
-        const literalKorean = lines[i + 2] || "";
-        const naturalKorean = lines[i + 3] || "";
-
-        rawExamples.push({
-          japanese,
-          furigana,
-          korean: literalKorean,
-          naturalKorean,
-          targetWord
-        });
-      }
-
-      if (rawExamples.length === 0) {
-        throw new Error(
-          `예문을 파싱하지 못했습니다. ${totalSentences}세트의 4줄 형식과 [[대상]] 표시를 확인해 주세요.`
-        );
-      }
-
-      // 예문 생성 단계에서는 TTS를 요청하지 않습니다.
-      // 사용자가 각 예문의 [🔊 요청] 버튼을 눌렀을 때만 Google TTS를 요청합니다.
-      const examples = rawExamples.map((item, idx) => {
-        const cleanJapanese = item.japanese.replace(/\[\[|\]\]/g, "");
-        return {
-          japanese: cleanJapanese,
-          rubyHtml: convertToInteractiveRuby(
-            item.japanese,
-            item.furigana,
-            idx
-          ),
-          korean: item.korean,
-          targetWord: item.targetWord,
-          audio64: ""
-        };
-      });
-
-      renderExamples(examples);
-
+      if (!examples.length) throw new Error("생성된 내용을 화면 형식으로 변환하지 못했습니다.");
+      renderExamples(examples, mode);
     } catch (e) {
       console.error("예문 처리 오류:", e);
-      alert(`파싱 오류: ${e.message || e.toString()}`);
+      alert(`처리 오류: ${e.message || e.toString()}`);
     } finally {
-      btn1.disabled = false;
-      btn2.disabled = false;
+      buttons.forEach(btn => { if (btn) btn.disabled = false; });
     }
   }
 
   /* 첫 번째 코드의 HTML 구조 적용 (sentence-body span 및 숨김 방식) */
-  function renderExamples(examples) {
+  function renderExamples(examples, mode) {
     const container = document.getElementById('examplesContainer');
-    // 각 예문의 음성은 요청 버튼을 누른 뒤에만 생성합니다.
-    audioList = examples.map(item => item.audio64 ? new Audio(item.audio64) : null);
-    exampleJapaneseTexts = examples.map(item => item.japanese || '');
+    audioList = [];
+    voicevoxAudioList = [];
+    exampleJapaneseTexts = [];
+    exampleSpeakers = [];
     currentIndex = -1;
+    currentVoice = '';
 
-    container.innerHTML = examples.map((item, index) => {
-      const rightActionArea = isIOS ? `
-        <div class="action-column">
-          <div id="ios-furi-${index}" class="ios-furigana-display"></div>
-          <button class="play-btn" id="audio-btn-${index}" onclick="requestAudio(${index})">🔊 요청</button>
+    if (mode === 'dialogue') {
+      container.innerHTML = examples.map((item, index) => `
+        <div class="card">
+          <div class="dialogue-title">${index + 1}. 대화</div>
+          ${item.turns.map((turn, t) => renderDialogueTurn(turn, index*2+t)).join('')}
         </div>
-      ` : `
-        <button class="play-btn" id="audio-btn-${index}" onclick="requestAudio(${index})">🔊 요청</button>
-      `;
-
-      return `
+      `).join('');
+    } else {
+      container.innerHTML = examples.map((item, index) => `
         <div class="card">
           <div class="sentence-row">
             <div class="text-content">
               <div class="japanese">
                 <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index + 1}.</span>
-                <span id="sentence-${index}" class="sentence-body" style="display: none;">${item.rubyHtml}</span>
+                <span id="sentence-${index}" class="sentence-body" style="display:none;">${item.rubyHtml}</span>
               </div>
-              ${item.korean ? `
-                <div class="korean-container">
-                  <button class="toggle-btn" onclick="toggleKorean(this, 'kor-${index}')">💡 해석</button>
-                  <span id="kor-${index}" class="korean-text hidden-content">${item.korean}</span>
-                  ${item.targetWord ? `<span id="word-${index}" class="word-badge hidden-content">[${item.targetWord}]</span>` : ''}
-                </div>
-              ` : ''}
+              ${item.korean ? `<div class="korean-container"><button class="toggle-btn" onclick="toggleKorean(this,'kor-${index}')">💡 해석</button><span id="kor-${index}" class="korean-text hidden-content">${escapeHtml(item.korean)}</span>${item.targetWord ? `<span class="word-badge hidden-content">[${escapeHtml(item.targetWord)}]</span>` : ''}</div>` : ''}
             </div>
-            ${rightActionArea}
+            ${renderVoiceButtons(index)}
           </div>
         </div>
-      `;
-    }).join('');
+      `).join('');
+      examples.forEach((item,index)=>{
+        exampleJapaneseTexts[index]=item.japanese||'';
+        audioList[index]=null;
+        voicevoxAudioList[index]=null;
+        exampleSpeakers[index]=null;
+      });
+    }
+
+    if (mode === 'dialogue') {
+      examples.forEach((item)=>item.turns.forEach((turn, t)=>{
+        const idx = examples.indexOf(item)*2+t;
+        exampleJapaneseTexts[idx]=turn.japanese||'';
+        audioList[idx]=null; voicevoxAudioList[idx]=null; exampleSpeakers[idx]=null;
+      }));
+    }
+  }
+
+  function renderDialogueTurn(turn, index) {
+    return `
+      <div class="dialogue-turn">
+        <div class="dialogue-text">
+          <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index % 2 === 0 ? 'A' : 'B'}.</span>
+          <span id="sentence-${index}" class="sentence-body" style="display:none;">${turn.rubyHtml}</span>
+          ${turn.korean ? `<div class="korean-container"><button class="toggle-btn" onclick="toggleKorean(this,'kor-${index}')">💡 해석</button><span id="kor-${index}" class="korean-text hidden-content">${escapeHtml(turn.korean)}</span></div>` : ''}
+        </div>
+        ${renderVoiceButtons(index)}
+      </div>`;
+  }
+
+  function renderVoiceButtons(index) {
+    const buttons = `<div class="voice-buttons">
+      <button class="play-btn vox-btn" id="vox-btn-${index}" onclick="requestVoicevox(${index})">🎙️ VOX 요청</button>
+      <button class="play-btn google-btn" id="google-btn-${index}" onclick="requestGoogleAudio(${index})">🔊 구글 요청</button>
+    </div>`;
+    if (isIOS) {
+      return `<div class="action-column"><div id="ios-furi-${index}" class="ios-furigana-display"></div>${buttons}</div>`;
+    }
+    return buttons;
   }
 
   // 문장 번호 클릭: 
@@ -930,87 +872,82 @@ ${commonRules}
     }
   }
 
-  async function requestAudio(index) {
-    const btn = document.getElementById(`audio-btn-${index}`);
+  async function requestGoogleAudio(index) {
+    const btn = document.getElementById(`google-btn-${index}`);
     if (!btn) return;
-
-    // 이미 요청한 음성이 있으면 다시 요청하지 않고 재생합니다.
-    if (audioList[index]) {
-      playAudio(index);
-      return;
-    }
-
-    // 화면에 표시되는 후리가나가 아니라 원래 일본어 문장을 TTS에 전달합니다.
-    const textSource = exampleJapaneseTexts[index] || '';
-    if (!textSource.trim()) {
-      alert("먼저 문장 번호를 눌러 문장을 표시해주세요.");
-      return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = '🔊 요청 중...';
-
+    if (audioList[index]) { playVoice(index,'google'); return; }
+    const text = exampleJapaneseTexts[index] || '';
+    if (!text.trim()) return;
+    btn.disabled = true; btn.textContent = '🔊 요청 중...';
     try {
-      const audio64 = await fetchGoogleTtsBase64(textSource);
-      if (!audio64) {
-        throw new Error('음성 데이터를 불러오지 못했습니다.');
-      }
-
-      audioList[index] = new Audio(audio64);
-      btn.disabled = false;
-      btn.textContent = '▶️ 재생';
-      btn.onclick = () => playAudio(index);
-    } catch (e) {
-      console.error('Google TTS 요청 실패:', e);
-      btn.disabled = false;
-      btn.textContent = '🔊 음성 요청';
-      alert('구글 TTS 음성을 불러오지 못했습니다.');
+      const audio64 = await fetchGoogleTtsBase64(text);
+      if (!audio64) throw new Error('음성 데이터를 받지 못했습니다.');
+      audioList[index] = new Audio('data:audio/mp3;base64,' + audio64);
+      btn.disabled = false; btn.textContent = '▶️ 구글 재생';
+    } catch(e) {
+      console.error(e); btn.disabled=false; btn.textContent='🔊 구글 요청';
+      alert('구글 음성을 불러오지 못했습니다.');
     }
   }
 
-  function playAudio(index) {
-    const btns = document.querySelectorAll('.play-btn');
-    const targetBtn = document.getElementById(`audio-btn-${index}`);
-    const audio = audioList[index];
-
-    if (!audio || !targetBtn) {
-      return;
+  async function requestVoicevox(index) {
+    const btn = document.getElementById(`vox-btn-${index}`);
+    if (!btn) return;
+    if (voicevoxAudioList[index]) { playVoice(index,'vox'); return; }
+    const text = exampleJapaneseTexts[index] || '';
+    if (!text.trim()) return;
+    btn.disabled = true; btn.textContent = '🎙️ 요청 중...';
+    try {
+      const speaker = exampleSpeakers[index] || '';
+      const url = `${GAS_WEB_APP_URL}?voicevox=${encodeURIComponent(text)}${speaker ? `&speaker=${encodeURIComponent(speaker)}` : ''}&t=${Date.now()}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (!data.audio64) throw new Error('VOX 음성 데이터를 받지 못했습니다.');
+      voicevoxAudioList[index] = new Audio('data:audio/mp3;base64,' + data.audio64);
+      exampleSpeakers[index] = data.speakerId || speaker || null;
+      btn.disabled = false; btn.textContent = '▶️ VOX 재생';
+    } catch(e) {
+      console.error(e); btn.disabled=false; btn.textContent='🎙️ VOX 요청';
+      alert('VOX 음성을 불러오지 못했습니다.');
     }
-
-    if (currentIndex === index) {
-      if (audio.paused) {
-        audio.play();
-        targetBtn.textContent = '⏸️ 정지';
-        targetBtn.classList.add('playing');
-      } else {
-        audio.pause();
-        targetBtn.textContent = '▶️ 재생';
-        targetBtn.classList.remove('playing');
-      }
-      return;
-    }
-
-    if (currentIndex !== -1 && audioList[currentIndex]) {
-      audioList[currentIndex].pause();
-      audioList[currentIndex].currentTime = 0;
-      const oldBtn = document.getElementById(`audio-btn-${currentIndex}`);
-      if (oldBtn) {
-        oldBtn.textContent = '▶️ 재생';
-        oldBtn.classList.remove('playing');
-      }
-    }
-
-    currentIndex = index;
-    audio.currentTime = 0;
-    audio.play();
-    targetBtn.textContent = '⏸️ 정지';
-    targetBtn.classList.add('playing');
-
-    audio.onended = function() {
-      targetBtn.textContent = '▶️ 재생';
-      targetBtn.classList.remove('playing');
-    };
   }
+
+  function stopCurrentVoice() {
+    if (currentIndex < 0) return;
+    const lists = [audioList, voicevoxAudioList];
+    lists.forEach(list => {
+      const a = list[currentIndex];
+      if (a) { a.pause(); a.currentTime=0; }
+    });
+    const gb=document.getElementById(`google-btn-${currentIndex}`);
+    const vb=document.getElementById(`vox-btn-${currentIndex}`);
+    if(gb) { gb.textContent='▶️ 구글 재생'; gb.classList.remove('playing'); }
+    if(vb) { vb.textContent='▶️ VOX 재생'; vb.classList.remove('playing'); }
+  }
+
+  function playVoice(index, voice) {
+    const audio = voice === 'google' ? audioList[index] : voicevoxAudioList[index];
+    if (!audio) return;
+    if (currentIndex === index && currentVoice === voice) {
+      if (audio.paused) { audio.play(); setVoiceButton(index,voice,true); }
+      else { audio.pause(); setVoiceButton(index,voice,false); }
+      return;
+    }
+    stopCurrentVoice();
+    currentIndex=index; currentVoice=voice;
+    audio.currentTime=0; audio.play(); setVoiceButton(index,voice,true);
+    audio.onended=()=>{ setVoiceButton(index,voice,false); };
+  }
+
+  function setVoiceButton(index, voice, playing) {
+    const btn=document.getElementById(`${voice==='google'?'google':'vox'}-btn-${index}`);
+    if(!btn) return;
+    if(playing) { btn.textContent=voice==='google'?'⏸️ 구글 정지':'⏸️ VOX 정지'; btn.classList.add('playing'); }
+    else { btn.textContent=voice==='google'?'▶️ 구글 재생':'▶️ VOX 재생'; btn.classList.remove('playing'); }
+  }
+
+  // 기존 함수명 호환
+  function requestAudio(index) { requestGoogleAudio(index); }
 </script>
 </body>
 </html>
