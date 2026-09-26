@@ -322,7 +322,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5 문장</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5 생성</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
@@ -890,7 +890,7 @@ ${commonRules}
     } catch (e) {
       console.error('Google TTS 요청 실패:', e);
       btn.disabled = false;
-      btn.textContent = '🔊 음성 요청';
+      btn.textContent = '🔊 요청';
       alert('구글 TTS 음성을 불러오지 못했습니다.');
     }
   }
