@@ -338,7 +338,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnFive" onclick="processWords('five')">5생성</button>
+      <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
       <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">문장</button>
       <button class="main-btn" id="btnDialogue" onclick="processWords('dialogue')" style="background-color: #34a853;">대화</button>
     </div>
@@ -367,17 +367,36 @@
   let exampleSpeakers = [];
 
   function getApiKey() {
-    return localStorage.getItem('GEMINI_API_KEY') || '';
+    try {
+      return window.localStorage.getItem('GEMINI_API_KEY') || '';
+    } catch (e) {
+      console.warn('localStorage 읽기 실패:', e);
+      return '';
+    }
   }
 
   function saveApiKey() {
-    const key = document.getElementById('apiKeyInput').value.trim();
+    const input = document.getElementById('apiKeyInput');
+    const key = input ? input.value.trim() : '';
     if (!key) {
       alert("API 키를 입력해주세요.");
       return;
     }
-    localStorage.setItem('GEMINI_API_KEY', key);
-    alert("API 키가 브라우저에 안전하게 저장되었습니다.");
+    try {
+      window.localStorage.setItem('GEMINI_API_KEY', key);
+      input.value = key;
+      alert("API 키가 브라우저에 저장되었습니다.");
+    } catch (e) {
+      console.error('API 키 저장 실패:', e);
+      alert("이 브라우저에서는 API 키를 저장할 수 없습니다. 브라우저 설정을 확인해주세요.");
+    }
+  }
+
+  function restoreSavedApiKey() {
+    const input = document.getElementById('apiKeyInput');
+    if (!input) return;
+    const savedKey = getApiKey();
+    if (savedKey) input.value = savedKey;
   }
 
   async function fetchSheetWords() {
@@ -416,12 +435,8 @@
     }
   }
 
-  window.addEventListener('DOMContentLoaded', () => {
-    const savedKey = getApiKey();
-    if (savedKey) {
-      document.getElementById('apiKeyInput').value = savedKey;
-    }
-  });
+  window.addEventListener('DOMContentLoaded', restoreSavedApiKey);
+  window.addEventListener('load', restoreSavedApiKey);
 
   async function callGeminiAPI(prompt, temperature = 0.85) {
     const apiKey = getApiKey();
@@ -535,15 +550,6 @@
     let html = "";
     let lastIndex = 0;
     let basePos = 0;
-
-    function window.escapeHtml(value) {
-      return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-    }
 
     let blindOpen = false;
 
