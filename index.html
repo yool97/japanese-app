@@ -153,15 +153,23 @@
       text-size-adjust: 100% !important;
     }
     
-    /* 스프레드시트와 동일한 3단계 블라인드 표시 */
-    .sentence-body.blind-mode .blind-target {
-      color: #ffffff !important;
+    /* 스프레드시트와 동일한 3단계 블라인드 표시
+       1단계: 문장 전체 숨김
+       2단계: 대상 부분을 (     )로 표시
+       3단계: 대상 부분까지 표시 */
+    .sentence-body.blind-mode .blind-target .blind-original {
+      display: none !important;
     }
-    .sentence-body.blind-mode .blind-target * {
-      color: #ffffff !important;
-    }
-    .sentence-body.revealed-mode .blind-target {
+    .sentence-body.blind-mode .blind-target::after {
+      content: "(     )";
       color: inherit;
+      white-space: pre;
+    }
+    .sentence-body.revealed-mode .blind-target .blind-original {
+      display: inline !important;
+    }
+    .sentence-body.revealed-mode .blind-target::after {
+      content: none;
     }
 
     .number-btn {
@@ -322,7 +330,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5 생성</button>
+      <button class="main-btn" id="btnSingle" onclick="processWords(false)">🔊 한 단어로 5 문장</button>
       <button class="main-btn" id="btnRandom" onclick="processWords(true)" style="background-color: #34a853;">🎲 랜덤/복수 예문 생성</button>
     </div>
   </div>
@@ -474,42 +482,107 @@
     }
   }
 
-  /* 후리가나 + [[대상부분]] 블라인드 정보를 함께 HTML로 변환합니다. */
-  function convertToInteractiveRuby(kanjiText, furiganaText, sentenceIndex) {
-    let targetText = furiganaText || kanjiText;
-    if (!targetText) return "";
+  /* 일본어 원문과 후리가나를 맞춰 HTML로 변환합니다.
+     [[...]]의 위치는 일본어 원문을 기준으로 잡고,
+     후리가나 줄에는 [[...]]가 없다는 현재 GAS 규칙에 맞춰 같은 위치를
+     후리가나 HTML 안에 정확히 적용합니다. */
+  function convertToInteractiveRuby(japaneseText, furiganaText, sentenceIndex) {
+    if (!japaneseText) return "";
 
-    targetText = targetText
+    const cleanJapanese = japaneseText
       .replace(/<\/?u>/gi, "")
       .replace(/<\/?b>/gi, "");
 
-    // [[...]]는 대상 범위를 나타냅니다.
-    // 먼저 span으로 바꾼 뒤 후리가나를 처리하므로 두 기능이 충돌하지 않습니다.
-    targetText = targetText
-      .replace(/\[\[/g, '<span class="blind-target">')
-      .replace(/\]\]/g, '</span>');
+    const markerMatch = cleanJapanese.match(/\[\[([\s\S]*?)\]\]/);
+    const targetWord = markerMatch ? markerMatch[1] : "";
+    const baseJapanese = cleanJapanese.replace(/\[\[|\]\]/g, "");
+    const targetStart = targetWord ? baseJapanese.indexOf(targetWord) : -1;
+    const targetEnd = targetStart >= 0 ? targetStart + targetWord.length : -1;
+
+    const source = (furiganaText || baseJapanese)
+      .replace(/<\/?u>/gi, "")
+      .replace(/<\/?b>/gi, "");
 
     const onclickAttr = isIOS
       ? `onclick="toggleRubyIOS(this, ${sentenceIndex})"`
       : `onclick="toggleRuby(this)"`;
 
-    if (targetText.includes('](')) {
-      targetText = targetText.replace(
-        /\[([^\]\n]+)\]\(([^)\n]+)\)/g,
-        (m, k, f) =>
-          `<ruby class="interactive-ruby" ${onclickAttr}><rb>${k}</rb><rt class="ruby-text hidden-rt">${f}</rt></ruby>`
-      );
+    // 후리가나 표기를 토큰 단위로 읽습니다.
+    // 각 토큰의 baseTextLength를 이용해 원문의 대상 범위와 정확히 맞춥니다.
+    const tokenRegex = /\[([^\]\n]+)\]\(([^)\n]+)\)|([一-龠々〆ヶ]+)\[([^\]\n]+)\]/g;
+    let html = "";
+    let lastIndex = 0;
+    let basePos = 0;
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
     }
 
-    targetText = targetText.replace(
-      /([一-龠a-zA-Z0-9]+|\[[一-龠a-zA-Z0-9]+\])\[([^\]]+)\]/g,
-      (m, k, f) => {
-        const cleanK = k.replace(/[\[\]]/g, '');
-        return `<ruby class="interactive-ruby" ${onclickAttr}><rb>${cleanK}</rb><rt class="ruby-text hidden-rt">${f}</rt></ruby>`;
-      }
-    );
+    let blindOpen = false;
 
-    return targetText;
+    function setBlindState(overlapsTarget) {
+      if (overlapsTarget && !blindOpen) {
+        html += '<span class="blind-target"><span class="blind-original">';
+        blindOpen = true;
+      } else if (!overlapsTarget && blindOpen) {
+        html += '</span></span>';
+        blindOpen = false;
+      }
+    }
+
+    function appendPart(text, partStart, partEnd) {
+      if (!text) return;
+
+      const overlapsTarget =
+        targetStart >= 0 && partStart < targetEnd && partEnd > targetStart;
+
+      setBlindState(overlapsTarget);
+      html += escapeHtml(text);
+    }
+
+    function appendRuby(baseText, reading, partStart, partEnd) {
+      const overlapsTarget =
+        targetStart >= 0 && partStart < targetEnd && partEnd > targetStart;
+      setBlindState(overlapsTarget);
+      html += `<ruby class="interactive-ruby" ${onclickAttr}><rb>${escapeHtml(baseText)}</rb><rt class="ruby-text hidden-rt">${escapeHtml(reading)}</rt></ruby>`;
+    }
+
+    let match;
+    while ((match = tokenRegex.exec(source)) !== null) {
+      // 후리가나 표기 앞의 일반 문자
+      const plain = source.slice(lastIndex, match.index);
+      if (plain) {
+        appendPart(plain, basePos, basePos + plain.length);
+        basePos += plain.length;
+      }
+
+      const baseText = match[1] !== undefined ? match[1] : match[3];
+      const reading = match[2] !== undefined ? match[2] : match[4];
+      appendRuby(baseText, reading, basePos, basePos + baseText.length);
+      basePos += baseText.length;
+      lastIndex = tokenRegex.lastIndex;
+    }
+
+    // 마지막 일반 문자
+    const tail = source.slice(lastIndex);
+    if (tail) appendPart(tail, basePos, basePos + tail.length);
+
+    if (blindOpen) {
+      html += '</span></span>';
+      blindOpen = false;
+    }
+
+    // 후리가나 형식이 전혀 없는 경우에도 원문을 표시합니다.
+    if (!html) {
+      html = escapeHtml(baseJapanese);
+    }
+
+    return html;
   }
 
   async function processWords(isRandomMode) {
@@ -890,7 +963,7 @@ ${commonRules}
     } catch (e) {
       console.error('Google TTS 요청 실패:', e);
       btn.disabled = false;
-      btn.textContent = '🔊 요청';
+      btn.textContent = '🔊 음성 요청';
       alert('구글 TTS 음성을 불러오지 못했습니다.');
     }
   }
