@@ -311,6 +311,7 @@
     .btn-group { display:flex; gap:6px; }
     .btn-group .main-btn { flex:1; min-width:0; }
     .voice-buttons { display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
+    .voice-buttons .failed { background:#fce8e6; color:#d93025; }
     .dialogue-title { font-weight:bold; color:#5f6368; font-size:13px; margin-bottom:8px; }
     .dialogue-turn { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:7px 0; border-top:1px solid #eee; }
     .dialogue-turn:first-of-type { border-top:none; }
@@ -338,7 +339,7 @@
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
     <div class="btn-group">
-      <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
+      <button class="main-btn" id="btnFive" onclick="processWords('five')">5생성</button>
       <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">문장</button>
       <button class="main-btn" id="btnDialogue" onclick="processWords('dialogue')" style="background-color: #34a853;">대화</button>
     </div>
@@ -351,7 +352,7 @@
   // iOS 기기 여부 감지
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbywkqci6g_3fLpS7RJYfFyjDbHKN9IEHjkVqBl-YR8AqEdD4Pmb64RMj1tmYX6mdsdyVA/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyKHSxogJeVH0xu2sML3-3sSw3xpU_iCXJWJuVx_OJJQzBNEWQivsG81Q3PJEgsZJL8ow/exec';
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
@@ -797,8 +798,8 @@ ${commonRules}
 
   function renderVoiceButtons(index) {
     const buttons = `<div class="voice-buttons">
-      <button class="play-btn vox-btn" id="vox-btn-${index}" onclick="requestVoicevox(${index})">🎙️ VOX 요청</button>
-      <button class="play-btn google-btn" id="google-btn-${index}" onclick="requestGoogleAudio(${index})">🔊 구글 요청</button>
+      <button class="play-btn vox-btn" id="vox-btn-${index}" onclick="handleVoiceButton(${index}, 'vox')">🎙️ 요청</button>
+      <button class="play-btn google-btn" id="google-btn-${index}" onclick="handleVoiceButton(${index}, 'google')">🎙️ 요청</button>
     </div>`;
     if (isIOS) {
       return `<div class="action-column"><div id="ios-furi-${index}" class="ios-furigana-display"></div>${buttons}</div>`;
@@ -888,78 +889,204 @@ ${commonRules}
     }
   }
 
-  async function requestGoogleAudio(index) {
-    const btn = document.getElementById(`google-btn-${index}`);
+  function getVoiceButton(index, voice) {
+    return document.getElementById(`${voice === 'google' ? 'google' : 'vox'}-btn-${index}`);
+  }
+
+  function getVoiceAudio(index, voice) {
+    return voice === 'google' ? audioList[index] : voicevoxAudioList[index];
+  }
+
+  function setVoiceButtonState(index, voice, state) {
+    const btn = getVoiceButton(index, voice);
     if (!btn) return;
-    if (audioList[index]) { playVoice(index,'google'); return; }
+
+    btn.classList.remove('playing', 'failed');
+    btn.disabled = false;
+
+    if (state === 'loading') {
+      btn.disabled = true;
+      btn.textContent = '⏳ 로딩';
+    } else if (state === 'request') {
+      btn.textContent = '🎙️ 요청';
+    } else if (state === 'play') {
+      btn.textContent = '▶️ 재생';
+    } else if (state === 'stop') {
+      btn.textContent = '⏸️ 정지';
+      btn.classList.add('playing');
+    } else if (state === 'failed') {
+      btn.textContent = '🔃 실패';
+      btn.classList.add('failed');
+    }
+  }
+
+  async function handleVoiceButton(index, voice) {
+    const audio = getVoiceAudio(index, voice);
+
+    // 이미 음성이 준비되어 있으면 재생/정지만 담당합니다.
+    if (audio) {
+      playVoice(index, voice);
+      return;
+    }
+
+    // 실패 상태를 눌렀을 때도 다시 요청합니다.
+    if (voice === 'google') {
+      await requestGoogleAudio(index);
+    } else {
+      await requestVoicevox(index);
+    }
+  }
+
+  async function requestGoogleAudio(index) {
+    const btn = getVoiceButton(index, 'google');
+    if (!btn) return;
+
+    // 이미 받아온 음성이 있으면 요청하지 않고 재생합니다.
+    if (audioList[index]) {
+      playVoice(index, 'google');
+      return;
+    }
+
     const text = exampleJapaneseTexts[index] || '';
     if (!text.trim()) return;
-    btn.disabled = true; btn.textContent = '🔊 요청 중...';
+
+    setVoiceButtonState(index, 'google', 'loading');
+
     try {
       const audio64 = await fetchGoogleTtsBase64(text);
-      if (!audio64) throw new Error('음성 데이터를 받지 못했습니다.');
-      audioList[index] = new Audio('data:audio/mp3;base64,' + audio64);
-      btn.disabled = false; btn.textContent = '▶️ 구글 재생';
-    } catch(e) {
-      console.error(e); btn.disabled=false; btn.textContent='🔊 구글 요청';
-      alert('구글 음성을 불러오지 못했습니다.');
+      if (!audio64) throw new Error('Google 음성 데이터가 없습니다.');
+
+      const audio = new Audio('data:audio/mp3;base64,' + audio64);
+      audioList[index] = audio;
+      audio.addEventListener('error', () => {
+        audioList[index] = null;
+        if (!(currentIndex === index && currentVoice === 'google')) {
+          setVoiceButtonState(index, 'google', 'failed');
+        }
+      });
+
+      setVoiceButtonState(index, 'google', 'play');
+    } catch (e) {
+      console.error('Google 음성 요청 실패:', e);
+      audioList[index] = null;
+      setVoiceButtonState(index, 'google', 'failed');
     }
   }
 
   async function requestVoicevox(index) {
-    const btn = document.getElementById(`vox-btn-${index}`);
+    const btn = getVoiceButton(index, 'vox');
     if (!btn) return;
-    if (voicevoxAudioList[index]) { playVoice(index,'vox'); return; }
+
+    // 이미 받아온 음성이 있으면 요청하지 않고 재생합니다.
+    if (voicevoxAudioList[index]) {
+      playVoice(index, 'vox');
+      return;
+    }
+
     const text = exampleJapaneseTexts[index] || '';
     if (!text.trim()) return;
-    btn.disabled = true; btn.textContent = '🎙️ 요청 중...';
+
+    setVoiceButtonState(index, 'vox', 'loading');
+
     try {
       const speaker = exampleSpeakers[index] || '';
       const url = `${GAS_WEB_APP_URL}?voicevox=${encodeURIComponent(text)}${speaker ? `&speaker=${encodeURIComponent(speaker)}` : ''}&t=${Date.now()}`;
       const res = await fetch(url);
+      if (!res.ok) throw new Error(`VOX 요청 HTTP ${res.status}`);
+
       const data = await res.json();
-      if (!data.audio64) throw new Error('VOX 음성 데이터를 받지 못했습니다.');
-      voicevoxAudioList[index] = new Audio('data:audio/mp3;base64,' + data.audio64);
+      if (!data.audio64) throw new Error(data.error || 'VOX 음성 데이터가 없습니다.');
+
+      const audio = new Audio('data:audio/mp3;base64,' + data.audio64);
+      voicevoxAudioList[index] = audio;
       exampleSpeakers[index] = data.speakerId || speaker || null;
-      btn.disabled = false; btn.textContent = '▶️ VOX 재생';
-    } catch(e) {
-      console.error(e); btn.disabled=false; btn.textContent='🎙️ VOX 요청';
-      alert('VOX 음성을 불러오지 못했습니다.');
+      audio.addEventListener('error', () => {
+        voicevoxAudioList[index] = null;
+        if (!(currentIndex === index && currentVoice === 'vox')) {
+          setVoiceButtonState(index, 'vox', 'failed');
+        }
+      });
+
+      setVoiceButtonState(index, 'vox', 'play');
+    } catch (e) {
+      console.error('VOX 음성 요청 실패:', e);
+      voicevoxAudioList[index] = null;
+      setVoiceButtonState(index, 'vox', 'failed');
     }
   }
 
   function stopCurrentVoice() {
     if (currentIndex < 0) return;
+
+    const oldIndex = currentIndex;
+    const oldVoice = currentVoice;
+
     const lists = [audioList, voicevoxAudioList];
     lists.forEach(list => {
-      const a = list[currentIndex];
-      if (a) { a.pause(); a.currentTime=0; }
+      const a = list[oldIndex];
+      if (a) {
+        a.pause();
+        a.currentTime = 0;
+      }
     });
-    const gb=document.getElementById(`google-btn-${currentIndex}`);
-    const vb=document.getElementById(`vox-btn-${currentIndex}`);
-    if(gb) { gb.textContent='▶️ 구글 재생'; gb.classList.remove('playing'); }
-    if(vb) { vb.textContent='▶️ VOX 재생'; vb.classList.remove('playing'); }
+
+    ['google', 'vox'].forEach(voice => {
+      const audio = getVoiceAudio(oldIndex, voice);
+      if (audio) setVoiceButtonState(oldIndex, voice, 'play');
+    });
+
+    currentIndex = -1;
+    currentVoice = '';
   }
 
   function playVoice(index, voice) {
-    const audio = voice === 'google' ? audioList[index] : voicevoxAudioList[index];
+    const audio = getVoiceAudio(index, voice);
     if (!audio) return;
+
     if (currentIndex === index && currentVoice === voice) {
-      if (audio.paused) { audio.play(); setVoiceButton(index,voice,true); }
-      else { audio.pause(); setVoiceButton(index,voice,false); }
+      if (audio.paused) {
+        audio.play().then(() => setVoiceButtonState(index, voice, 'stop')).catch(e => {
+          console.error('음성 재생 실패:', e);
+          if (voice === 'google') audioList[index] = null;
+          else voicevoxAudioList[index] = null;
+          setVoiceButtonState(index, voice, 'failed');
+        });
+        setVoiceButtonState(index, voice, 'stop');
+      } else {
+        audio.pause();
+        setVoiceButtonState(index, voice, 'play');
+      }
       return;
     }
+
     stopCurrentVoice();
-    currentIndex=index; currentVoice=voice;
-    audio.currentTime=0; audio.play(); setVoiceButton(index,voice,true);
-    audio.onended=()=>{ setVoiceButton(index,voice,false); };
+    currentIndex = index;
+    currentVoice = voice;
+
+    audio.currentTime = 0;
+    audio.play().then(() => {
+      setVoiceButtonState(index, voice, 'stop');
+    }).catch(e => {
+      console.error('음성 재생 실패:', e);
+      if (voice === 'google') audioList[index] = null;
+      else voicevoxAudioList[index] = null;
+      currentIndex = -1;
+      currentVoice = '';
+      setVoiceButtonState(index, voice, 'failed');
+    });
+
+    setVoiceButtonState(index, voice, 'stop');
+    audio.onended = () => {
+      if (currentIndex === index && currentVoice === voice) {
+        currentIndex = -1;
+        currentVoice = '';
+      }
+      setVoiceButtonState(index, voice, 'play');
+    };
   }
 
   function setVoiceButton(index, voice, playing) {
-    const btn=document.getElementById(`${voice==='google'?'google':'vox'}-btn-${index}`);
-    if(!btn) return;
-    if(playing) { btn.textContent=voice==='google'?'⏸️ 구글 정지':'⏸️ VOX 정지'; btn.classList.add('playing'); }
-    else { btn.textContent=voice==='google'?'▶️ 구글 재생':'▶️ VOX 재생'; btn.classList.remove('playing'); }
+    setVoiceButtonState(index, voice, playing ? 'stop' : 'play');
   }
 
   // 기존 함수명 호환
