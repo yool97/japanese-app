@@ -707,8 +707,8 @@ ${commonRules}
           examples.push({
             dialogue: true,
             turns: [
-              { japanese:aJ.replace(/\[\[|\]\]/g,''), rubyHtml:convertToInteractiveRuby(aJ,aF,examples.length*2), korean:aK },
-              { japanese:bJ.replace(/\[\[|\]\]/g,''), rubyHtml:convertToInteractiveRuby(bJ,bF,examples.length*2+1), korean:bK }
+              { japanese:aJ.replace(/\[\[|\]\]/g,''), japaneseWithMarker:aJ, furigana:aF, rubyHtml:convertToInteractiveRuby(aJ,aF,examples.length*2), korean:aK },
+              { japanese:bJ.replace(/\[\[|\]\]/g,''), japaneseWithMarker:bJ, furigana:bF, rubyHtml:convertToInteractiveRuby(bJ,bF,examples.length*2+1), korean:bK }
             ]
           });
         }
@@ -719,6 +719,8 @@ ${commonRules}
           if (!markerMatch) continue;
           examples.push({
             japanese: japaneseWithMarker.replace(/\[\[|\]\]/g,''),
+            japaneseWithMarker,
+            furigana: lines[i+1],
             rubyHtml: convertToInteractiveRuby(japaneseWithMarker, lines[i+1], i/4),
             korean: lines[i+2] || '',
             targetWord: markerMatch[1]
@@ -726,6 +728,27 @@ ${commonRules}
         }
       }
       if (!examples.length) throw new Error("생성된 내용을 화면 형식으로 변환하지 못했습니다.");
+
+      // 생성된 결과의 '세트' 자체를 랜덤하게 섞습니다.
+      // 대화는 두 문장을 한 세트로 유지한 채 세트 단위로만 섞습니다.
+      for (let i = examples.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [examples[i], examples[j]] = [examples[j], examples[i]];
+      }
+
+      // 랜덤화 후 iOS 후리가나/문장 토글용 인덱스를 현재 표시 순서에 맞게 다시 생성합니다.
+      if (mode === 'dialogue') {
+        examples.forEach((item, index) => {
+          item.turns.forEach((turn, t) => {
+            turn.rubyHtml = convertToInteractiveRuby(turn.japaneseWithMarker || turn.japanese, turn.furigana || '', index * 2 + t);
+          });
+        });
+      } else {
+        examples.forEach((item, index) => {
+          item.rubyHtml = convertToInteractiveRuby(item.japaneseWithMarker || item.japanese, item.furigana || '', index);
+        });
+      }
+
       renderExamples(examples, mode);
     } catch (e) {
       console.error("예문 처리 오류:", e);
