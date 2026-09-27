@@ -310,6 +310,11 @@
 
     .btn-group { display:flex; gap:6px; }
     .btn-group .main-btn { flex:1; min-width:0; }
+    .sheet-range-row { display:flex; align-items:center; gap:6px; margin:8px 0 10px; }
+    .sheet-range-row input { width:70px; min-width:0; box-sizing:border-box; padding:9px 8px; border:1px solid #dadce0; border-radius:6px; font-size:14px; text-align:center; }
+    .sheet-range-row span { color:#5f6368; font-size:14px; }
+    .sheet-range-row .range-btn { flex:1; padding:9px 10px; border:0; border-radius:6px; background:#f1f3f4; color:#202124; font-size:13px; cursor:pointer; }
+    .sheet-range-row .range-btn:disabled { opacity:.6; cursor:default; }
     .voice-buttons { display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
     .voice-buttons .failed { background:#fce8e6; color:#d93025; }
     .dialogue-title { font-weight:bold; color:#5f6368; font-size:13px; margin-bottom:8px; }
@@ -338,6 +343,14 @@
     </div>
 
     <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
+
+    <div class="sheet-range-row">
+      <input type="number" id="rangeStart" min="1" step="1" placeholder="행" aria-label="시작 행">
+      <span>~</span>
+      <input type="number" id="rangeEnd" min="1" step="1" placeholder="행" aria-label="끝 행">
+      <button class="range-btn" id="btnRange" onclick="fetchSheetRange()">불러오기</button>
+    </div>
+
     <div class="btn-group">
       <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
       <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">문장</button>
@@ -400,6 +413,40 @@
     if (savedKey) input.value = savedKey;
   }
 
+  // 시트 범위(시작행/끝행)를 브라우저에 저장하여
+  // 새로고침하거나 나중에 다시 열어도 마지막 입력값을 유지합니다.
+  const SHEET_RANGE_START_KEY = 'SHEET_RANGE_START';
+  const SHEET_RANGE_END_KEY = 'SHEET_RANGE_END';
+
+  function saveSheetRangeInputs() {
+    const startInput = document.getElementById('rangeStart');
+    const endInput = document.getElementById('rangeEnd');
+    if (!startInput || !endInput) return;
+
+    try {
+      window.localStorage.setItem(SHEET_RANGE_START_KEY, startInput.value);
+      window.localStorage.setItem(SHEET_RANGE_END_KEY, endInput.value);
+    } catch (e) {
+      console.warn('시트 범위 저장 실패:', e);
+    }
+  }
+
+  function restoreSavedSheetRange() {
+    const startInput = document.getElementById('rangeStart');
+    const endInput = document.getElementById('rangeEnd');
+    if (!startInput || !endInput) return;
+
+    try {
+      const savedStart = window.localStorage.getItem(SHEET_RANGE_START_KEY);
+      const savedEnd = window.localStorage.getItem(SHEET_RANGE_END_KEY);
+
+      if (savedStart !== null) startInput.value = savedStart;
+      if (savedEnd !== null) endInput.value = savedEnd;
+    } catch (e) {
+      console.warn('저장된 시트 범위 읽기 실패:', e);
+    }
+  }
+
   async function fetchSheetWords() {
     const inputArea = document.getElementById('inputText');
     const reloadBtn = document.getElementById('btnReload');
@@ -417,10 +464,12 @@
       const response = await fetch(`${GAS_WEB_APP_URL}?t=${new Date().getTime()}`);
       const data = await response.json();
 
+      if (data.error) throw new Error(data.error);
+
       if (data.words && data.words.length > 0) {
         inputArea.value = data.words.join('\n');
       } else {
-        alert("스프레드시트에 단어가 없습니다.");
+        alert("S 시트 B열에 단어가 없습니다.");
       }
 
       if (data.dictionary && typeof data.dictionary === 'object') {
@@ -429,14 +478,73 @@
       }
     } catch (e) {
       console.error("스프레드시트 연동 오류:", e);
-      alert("스프레드시트에서 데이터를 불러오지 못했습니다.");
+      alert("스프레드시트에서 데이터를 불러오지 못했습니다.\n" + (e.message || ''));
     } finally {
       reloadBtn.disabled = false;
       reloadBtn.innerText = "🔄 시트 단어 불러오기";
     }
   }
 
-  window.addEventListener('DOMContentLoaded', restoreSavedApiKey);
+  async function fetchSheetRange() {
+    const inputArea = document.getElementById('inputText');
+    const startInput = document.getElementById('rangeStart');
+    const endInput = document.getElementById('rangeEnd');
+    const rangeBtn = document.getElementById('btnRange');
+
+    const start = Number(startInput.value);
+    const end = Number(endInput.value);
+
+    // 버튼을 눌렀을 때도 마지막 입력값을 확실히 저장합니다.
+    saveSheetRangeInputs();
+
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start) {
+      alert("시작 행과 끝 행을 올바르게 입력해주세요.");
+      return;
+    }
+
+    if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) {
+      alert("웹 앱 URL이 설정되지 않았습니다.");
+      return;
+    }
+
+    rangeBtn.disabled = true;
+    rangeBtn.innerText = "불러오는 중...";
+
+    try {
+      const url = `${GAS_WEB_APP_URL}?rangeStart=${encodeURIComponent(start)}&rangeEnd=${encodeURIComponent(end)}&t=${new Date().getTime()}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.error) throw new Error(data.error);
+
+      if (data.words && data.words.length > 0) {
+        inputArea.value = data.words.join('\n');
+      } else {
+        alert(`w 시트 B열 ${start}~${end}행에 단어가 없습니다.`);
+      }
+
+      if (data.dictionary && typeof data.dictionary === 'object') {
+        dynamicDictionary = data.dictionary;
+      }
+    } catch (e) {
+      console.error("스프레드시트 범위 불러오기 오류:", e);
+      alert("w 시트에서 데이터를 불러오지 못했습니다.\n" + (e.message || ''));
+    } finally {
+      rangeBtn.disabled = false;
+      rangeBtn.innerText = "불러오기";
+    }
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    restoreSavedApiKey();
+    restoreSavedSheetRange();
+
+    // 사용자가 숫자를 직접 바꿀 때마다 마지막 입력값을 저장합니다.
+    const startInput = document.getElementById('rangeStart');
+    const endInput = document.getElementById('rangeEnd');
+    if (startInput) startInput.addEventListener('input', saveSheetRangeInputs);
+    if (endInput) endInput.addEventListener('input', saveSheetRangeInputs);
+  });
   window.addEventListener('load', restoreSavedApiKey);
 
   async function callGeminiAPI(prompt, temperature = 0.85) {
