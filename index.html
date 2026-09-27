@@ -310,11 +310,23 @@
 
     .btn-group { display:flex; gap:6px; }
     .btn-group .main-btn { flex:1; min-width:0; }
-    .sheet-range-row { display:flex; align-items:center; gap:6px; margin:8px 0 10px; }
-    .sheet-range-row input { width:70px; min-width:0; box-sizing:border-box; padding:9px 8px; border:1px solid #dadce0; border-radius:6px; font-size:14px; text-align:center; }
+    .sheet-input-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; }
+    .sheet-input-panel { min-width:0; }
+    .sheet-input-title { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; font-size:13px; font-weight:bold; color:#3c4043; }
+    .sheet-input-title .sheet-name { color:#1a73e8; }
+    .sheet-input-panel textarea { height:140px; margin-bottom:6px; }
+    .sheet-range-row { display:flex; align-items:center; gap:5px; margin:0 0 8px; }
+    .sheet-range-row input { width:64px; min-width:0; box-sizing:border-box; padding:8px 6px; border:1px solid #dadce0; border-radius:6px; font-size:14px; text-align:center; }
     .sheet-range-row span { color:#5f6368; font-size:14px; }
-    .sheet-range-row .range-btn { flex:1; padding:9px 10px; border:0; border-radius:6px; background:#f1f3f4; color:#202124; font-size:13px; cursor:pointer; }
+    .sheet-range-row .range-btn { flex:1; min-width:0; padding:8px 6px; border:0; border-radius:6px; background:#f1f3f4; color:#202124; font-size:12px; cursor:pointer; }
     .sheet-range-row .range-btn:disabled { opacity:.6; cursor:default; }
+    @media (max-width: 520px) {
+      .sheet-input-grid { gap:7px; }
+      .sheet-input-title { font-size:12px; }
+      .sheet-input-panel textarea { height:130px; font-size:14px; }
+      .sheet-range-row input { width:56px; font-size:13px; }
+      .sheet-range-row .range-btn { font-size:11px; }
+    }
     .voice-buttons { display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
     .voice-buttons .failed { background:#fce8e6; color:#d93025; }
     .dialogue-title { font-weight:bold; color:#5f6368; font-size:13px; margin-bottom:8px; }
@@ -339,16 +351,33 @@
 
     <div class="input-header">
       <span style="font-size: 13px; color: #5f6368;">학습할 단어 목록:</span>
-      <button class="reload-btn" id="btnReload" onclick="fetchSheetWords()">🔄 시트 단어 불러오기</button>
+      <span style="font-size:12px; color:#5f6368;">V ↔ W 같은 행끼리 연결</span>
     </div>
 
-    <textarea id="inputText" placeholder="스프레드시트 연동 중... (실패 시 직접 입력 가능)"></textarea>
+    <div class="sheet-input-grid">
+      <div class="sheet-input-panel">
+        <div class="sheet-input-title"><span class="sheet-name">왼쪽 · V 시트</span><span>입력</span></div>
+        <textarea id="inputTextLeft" placeholder="V 시트 단어
+직접 입력도 가능"></textarea>
+        <div class="sheet-range-row">
+          <input type="number" id="vRangeStart" min="1" step="1" placeholder="시작" aria-label="V 시트 시작 행">
+          <span>~</span>
+          <input type="number" id="vRangeEnd" min="1" step="1" placeholder="끝" aria-label="V 시트 끝 행">
+          <button class="range-btn" id="btnVRange" onclick="fetchSheetRange('V')">V 불러오기</button>
+        </div>
+      </div>
 
-    <div class="sheet-range-row">
-      <input type="number" id="rangeStart" min="1" step="1" placeholder="행" aria-label="시작 행">
-      <span>~</span>
-      <input type="number" id="rangeEnd" min="1" step="1" placeholder="행" aria-label="끝 행">
-      <button class="range-btn" id="btnRange" onclick="fetchSheetRange()">불러오기</button>
+      <div class="sheet-input-panel">
+        <div class="sheet-input-title"><span class="sheet-name">오른쪽 · W 시트</span><span>입력</span></div>
+        <textarea id="inputTextRight" placeholder="W 시트 단어
+직접 입력도 가능"></textarea>
+        <div class="sheet-range-row">
+          <input type="number" id="wRangeStart" min="1" step="1" placeholder="시작" aria-label="W 시트 시작 행">
+          <span>~</span>
+          <input type="number" id="wRangeEnd" min="1" step="1" placeholder="끝" aria-label="W 시트 끝 행">
+          <button class="range-btn" id="btnWRange" onclick="fetchSheetRange('W')">W 불러오기</button>
+        </div>
+      </div>
     </div>
 
     <div class="btn-group">
@@ -365,7 +394,7 @@
   // iOS 기기 여부 감지
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz5IwaI0mPBj6K5g82cU2DCBXqlFUxv3mXP9VSJyWD70wybdDdkiKmGuotjE20AZn1uig/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx_BZ_jbhmbFQNNyh3lU6k_aBKuaVQSqxq0eFiHB9d-KgMuKoXtZQofjan8M6Bu4YKyng/exec';
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
@@ -413,137 +442,72 @@
     if (savedKey) input.value = savedKey;
   }
 
-  // 시트 범위(시작행/끝행)를 브라우저에 저장하여
-  // 새로고침하거나 나중에 다시 열어도 마지막 입력값을 유지합니다.
-  const SHEET_RANGE_START_KEY = 'SHEET_RANGE_START';
-  const SHEET_RANGE_END_KEY = 'SHEET_RANGE_END';
+  // V/W 시트의 시작행·끝행을 각각 브라우저에 저장합니다.
+  // 기존 버전의 단일 범위는 W 시트 범위였으므로 기존 값을 W에 이어받습니다.
+  const V_RANGE_START_KEY = 'V_SHEET_RANGE_START';
+  const V_RANGE_END_KEY = 'V_SHEET_RANGE_END';
+  const W_RANGE_START_KEY = 'W_SHEET_RANGE_START';
+  const W_RANGE_END_KEY = 'W_SHEET_RANGE_END';
 
-  function saveSheetRangeInputs() {
-    const startInput = document.getElementById('rangeStart');
-    const endInput = document.getElementById('rangeEnd');
+  function saveSheetRangeInputs(sheetName) {
+    const prefix = sheetName === 'V' ? 'v' : 'w';
+    const startInput = document.getElementById(prefix + 'RangeStart');
+    const endInput = document.getElementById(prefix + 'RangeEnd');
     if (!startInput || !endInput) return;
-
     try {
-      window.localStorage.setItem(SHEET_RANGE_START_KEY, startInput.value);
-      window.localStorage.setItem(SHEET_RANGE_END_KEY, endInput.value);
-    } catch (e) {
-      console.warn('시트 범위 저장 실패:', e);
-    }
+      window.localStorage.setItem(sheetName === 'V' ? V_RANGE_START_KEY : W_RANGE_START_KEY, startInput.value);
+      window.localStorage.setItem(sheetName === 'V' ? V_RANGE_END_KEY : W_RANGE_END_KEY, endInput.value);
+    } catch (e) { console.warn(sheetName + ' 시트 범위 저장 실패:', e); }
   }
 
-  function restoreSavedSheetRange() {
-    const startInput = document.getElementById('rangeStart');
-    const endInput = document.getElementById('rangeEnd');
-    if (!startInput || !endInput) return;
-
+  function restoreSavedSheetRanges() {
     try {
-      const savedStart = window.localStorage.getItem(SHEET_RANGE_START_KEY);
-      const savedEnd = window.localStorage.getItem(SHEET_RANGE_END_KEY);
-
-      if (savedStart !== null) startInput.value = savedStart;
-      if (savedEnd !== null) endInput.value = savedEnd;
-    } catch (e) {
-      console.warn('저장된 시트 범위 읽기 실패:', e);
-    }
+      const vStart = document.getElementById('vRangeStart'), vEnd = document.getElementById('vRangeEnd');
+      const wStart = document.getElementById('wRangeStart'), wEnd = document.getElementById('wRangeEnd');
+      const legacyStart = window.localStorage.getItem('SHEET_RANGE_START');
+      const legacyEnd = window.localStorage.getItem('SHEET_RANGE_END');
+      const savedVStart = window.localStorage.getItem(V_RANGE_START_KEY);
+      const savedVEnd = window.localStorage.getItem(V_RANGE_END_KEY);
+      const savedWStart = window.localStorage.getItem(W_RANGE_START_KEY);
+      const savedWEnd = window.localStorage.getItem(W_RANGE_END_KEY);
+      if (vStart && savedVStart !== null) vStart.value = savedVStart;
+      if (vEnd && savedVEnd !== null) vEnd.value = savedVEnd;
+      if (wStart) wStart.value = savedWStart !== null ? savedWStart : (legacyStart || '');
+      if (wEnd) wEnd.value = savedWEnd !== null ? savedWEnd : (legacyEnd || '');
+    } catch (e) { console.warn('저장된 시트 범위 읽기 실패:', e); }
   }
 
-  async function fetchSheetWords() {
-    const inputArea = document.getElementById('inputText');
-    const reloadBtn = document.getElementById('btnReload');
-    
-    if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) {
-      alert("웹 앱 URL이 설정되지 않았습니다.");
-      inputArea.placeholder = "단어를 입력해주세요. (줄바꿈으로 구별)";
-      return;
-    }
-
-    reloadBtn.disabled = true;
-    reloadBtn.innerText = "🔄 불러오는 중...";
-
-    try {
-      const response = await fetch(`${GAS_WEB_APP_URL}?t=${new Date().getTime()}`);
-      const data = await response.json();
-
-      if (data.error) throw new Error(data.error);
-
-      if (data.words && data.words.length > 0) {
-        inputArea.value = data.words.join('\n');
-      } else {
-        alert("S 시트 B열에 단어가 없습니다.");
-      }
-
-      if (data.dictionary && typeof data.dictionary === 'object') {
-        dynamicDictionary = data.dictionary;
-        console.log("시트 동적 사전 불러오기 성공:", dynamicDictionary);
-      }
-    } catch (e) {
-      console.error("스프레드시트 연동 오류:", e);
-      alert("스프레드시트에서 데이터를 불러오지 못했습니다.\n" + (e.message || ''));
-    } finally {
-      reloadBtn.disabled = false;
-      reloadBtn.innerText = "🔄 시트 단어 불러오기";
-    }
-  }
-
-  async function fetchSheetRange() {
-    const inputArea = document.getElementById('inputText');
-    const startInput = document.getElementById('rangeStart');
-    const endInput = document.getElementById('rangeEnd');
-    const rangeBtn = document.getElementById('btnRange');
-
-    const start = Number(startInput.value);
-    const end = Number(endInput.value);
-
-    // 버튼을 눌렀을 때도 마지막 입력값을 확실히 저장합니다.
-    saveSheetRangeInputs();
-
+  async function fetchSheetRange(sheetName) {
+    const prefix = sheetName === 'V' ? 'v' : 'w';
+    const inputArea = document.getElementById(sheetName === 'V' ? 'inputTextLeft' : 'inputTextRight');
+    const startInput = document.getElementById(prefix + 'RangeStart');
+    const endInput = document.getElementById(prefix + 'RangeEnd');
+    const rangeBtn = document.getElementById(sheetName === 'V' ? 'btnVRange' : 'btnWRange');
+    const start = Number(startInput.value), end = Number(endInput.value);
+    saveSheetRangeInputs(sheetName);
     if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start) {
-      alert("시작 행과 끝 행을 올바르게 입력해주세요.");
-      return;
+      alert(`${sheetName} 시트의 시작 행과 끝 행을 올바르게 입력해주세요.`); return;
     }
-
-    if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) {
-      alert("웹 앱 URL이 설정되지 않았습니다.");
-      return;
-    }
-
-    rangeBtn.disabled = true;
-    rangeBtn.innerText = "불러오는 중...";
-
+    if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) { alert('웹 앱 URL이 설정되지 않았습니다.'); return; }
+    rangeBtn.disabled = true; rangeBtn.innerText = '불러오는 중...';
     try {
-      const url = `${GAS_WEB_APP_URL}?rangeStart=${encodeURIComponent(start)}&rangeEnd=${encodeURIComponent(end)}&t=${new Date().getTime()}`;
-      const response = await fetch(url);
-      const data = await response.json();
-
+      const url = `${GAS_WEB_APP_URL}?sheet=${encodeURIComponent(sheetName)}&rangeStart=${encodeURIComponent(start)}&rangeEnd=${encodeURIComponent(end)}&t=${new Date().getTime()}`;
+      const response = await fetch(url); const data = await response.json();
       if (data.error) throw new Error(data.error);
-
-      if (data.words && data.words.length > 0) {
-        inputArea.value = data.words.join('\n');
-      } else {
-        alert(`w 시트 B열 ${start}~${end}행에 단어가 없습니다.`);
-      }
-
-      if (data.dictionary && typeof data.dictionary === 'object') {
-        dynamicDictionary = data.dictionary;
-      }
+      if (data.words && data.words.length > 0) inputArea.value = data.words.join('\n');
+      else alert(`${sheetName} 시트 B열 ${start}~${end}행에 단어가 없습니다.`);
+      if (data.dictionary && typeof data.dictionary === 'object') dynamicDictionary = data.dictionary;
     } catch (e) {
-      console.error("스프레드시트 범위 불러오기 오류:", e);
-      alert("w 시트에서 데이터를 불러오지 못했습니다.\n" + (e.message || ''));
-    } finally {
-      rangeBtn.disabled = false;
-      rangeBtn.innerText = "불러오기";
-    }
+      console.error(`${sheetName} 시트 범위 불러오기 오류:`, e);
+      alert(`${sheetName} 시트에서 데이터를 불러오지 못했습니다.\n` + (e.message || ''));
+    } finally { rangeBtn.disabled = false; rangeBtn.innerText = `${sheetName} 불러오기`; }
   }
 
   window.addEventListener('DOMContentLoaded', () => {
-    restoreSavedApiKey();
-    restoreSavedSheetRange();
-
-    // 사용자가 숫자를 직접 바꿀 때마다 마지막 입력값을 저장합니다.
-    const startInput = document.getElementById('rangeStart');
-    const endInput = document.getElementById('rangeEnd');
-    if (startInput) startInput.addEventListener('input', saveSheetRangeInputs);
-    if (endInput) endInput.addEventListener('input', saveSheetRangeInputs);
+    restoreSavedApiKey(); restoreSavedSheetRanges();
+    [['vRangeStart','V'],['vRangeEnd','V'],['wRangeStart','W'],['wRangeEnd','W']].forEach(([id,sheet]) => {
+      const el = document.getElementById(id); if (el) el.addEventListener('input', () => saveSheetRangeInputs(sheet));
+    });
   });
   window.addEventListener('load', restoreSavedApiKey);
 
@@ -723,23 +687,25 @@
   }
 
   async function processWords(mode) {
-    const rawInput = document.getElementById('inputText').value.trim();
-    if (!rawInput) {
-      alert("단어를 입력하거나 불러온 후 실행해 주세요.");
+    const leftRaw = document.getElementById('inputTextLeft').value.trim();
+    const rightRaw = document.getElementById('inputTextRight').value.trim();
+    const leftWords = leftRaw ? leftRaw.split('\n').map(w => w.trim()).filter(Boolean) : [];
+    const rightWords = rightRaw ? rightRaw.split('\n').map(w => w.trim()).filter(Boolean) : [];
+    const hasLeft = leftWords.length > 0, hasRight = rightWords.length > 0;
+
+    if (!hasLeft && !hasRight) { alert('단어를 입력하거나 V/W 시트에서 불러온 후 실행해 주세요.'); return; }
+    if (hasLeft && hasRight && leftWords.length !== rightWords.length) {
+      alert(`V 시트 ${leftWords.length}개와 W 시트 ${rightWords.length}개의 단어 수가 다릅니다.\n두 시트에 단어가 모두 있으면 같은 개수로 맞춰주세요.`);
       return;
     }
 
-    const words = rawInput.split('\n').map(w => w.trim()).filter(w => w !== "");
-    const buttons = [
-      document.getElementById('btnFive'),
-      document.getElementById('btnSentence'),
-      document.getElementById('btnDialogue')
-    ];
+    const paired = hasLeft && hasRight;
+    const singleWords = hasLeft ? leftWords : rightWords;
+    const pairCount = paired ? leftWords.length : singleWords.length;
+    const buttons = [document.getElementById('btnFive'), document.getElementById('btnSentence'), document.getElementById('btnDialogue')];
     buttons.forEach(btn => { if (btn) btn.disabled = true; });
 
-    let prompt = "";
-    let totalSets = 0;
-
+    let prompt = '', totalSets = 0;
     const commonRules = `
 [예문 작성 규칙 - 매우 중요]:
 1. 문장의 시작 부분이나 어조가 서로 중복되거나 비슷하지 않게 다양화하세요.
@@ -762,111 +728,69 @@
 
     if (mode === 'five') {
       totalSets = 5;
-      prompt = `다음 입력 '${words[0]}' 하나를 사용하여 서로 다른 맥락의 자연스러운 일본어 예문 5개를 만드세요.
-입력 자체를 문맥에 맞게 자연스럽게 사용하세요.
-${commonRules}
-[출력 형식]
-정확히 20줄만 출력하세요. 각 세트는 4줄입니다.
-1줄 일본어 문장
-2줄 후리가나
-3줄 직역에 가까운 한국어
-4줄 자연스러운 한국어
-`;
-    } else if (mode === 'sentence') {
-      const count = words.length;
-      if (count === 1) {
-        totalSets = 3;
-        prompt = `다음 1개의 입력 '${words[0]}'를 활용하여 총 3개의 자연스러운 일본어 예문을 만드세요.`;
-      } else if (count === 2) {
-        totalSets = 4;
-        prompt = `다음 2개의 입력 '${words[0]}'와 '${words[1]}'를 각각 2개씩 활용하여 총 4개의 자연스러운 일본어 예문을 만드세요.`;
+      if (paired) {
+        const l = leftWords[0], r = rightWords[0];
+        prompt = `다음 V 시트 입력 '${l}'와 W 시트 입력 '${r}'를 모두 자연스럽게 사용하여 서로 다른 맥락의 일본어 예문 5개를 만드세요.\n두 입력은 각각 문장의 핵심이 되도록 사용하고, 대상 표시 [[...]]는 V 시트 입력 '${l}' 부분에 한 번만 붙이세요.`;
       } else {
-        totalSets = count;
-        prompt = `다음 ${count}개의 입력을 각각 1개씩 활용하여 총 ${count}개의 자연스러운 일본어 예문을 만드세요.\n입력 목록:\n${words.map((w,i)=>`${i+1}. ${w}`).join('\n')}`;
+        prompt = `다음 입력 '${singleWords[0]}' 하나를 사용하여 서로 다른 맥락의 자연스러운 일본어 예문 5개를 만드세요.`;
+      }
+      prompt += `\n입력 자체를 문맥에 맞게 자연스럽게 사용하세요.\n${commonRules}\n[출력 형식]\n정확히 20줄만 출력하세요. 각 세트는 4줄입니다.\n1줄 일본어 문장\n2줄 후리가나\n3줄 직역에 가까운 한국어\n4줄 자연스러운 한국어\n`;
+    } else if (mode === 'sentence') {
+      if (paired) {
+        totalSets = pairCount;
+        const pairs = leftWords.map((w,i) => `${i+1}. V: ${w} / W: ${rightWords[i]}`).join('\n');
+        prompt = `다음 V 시트와 W 시트의 단어를 같은 번호끼리 한 쌍으로 묶어 사용하여 총 ${totalSets}개의 자연스러운 일본어 예문을 만드세요.\n각 예문에는 해당 번호의 V 입력과 W 입력을 모두 반드시 자연스럽게 사용하세요.\n대상 부분 [[...]]는 각 문장에서 V 입력을 나타내는 부분에 한 번만 표시하세요.\n입력 목록:\n${pairs}`;
+      } else {
+        const count = singleWords.length;
+        if (count === 1) { totalSets = 3; prompt = `다음 1개의 입력 '${singleWords[0]}'를 활용하여 총 3개의 자연스러운 일본어 예문을 만드세요.`; }
+        else if (count === 2) { totalSets = 4; prompt = `다음 2개의 입력 '${singleWords[0]}'와 '${singleWords[1]}'를 각각 2개씩 활용하여 총 4개의 자연스러운 일본어 예문을 만드세요.`; }
+        else { totalSets = count; prompt = `다음 ${count}개의 입력을 각각 1개씩 활용하여 총 ${count}개의 자연스러운 일본어 예문을 만드세요.\n입력 목록:\n${singleWords.map((w,i)=>`${i+1}. ${w}`).join('\n')}`; }
       }
       prompt += `\n각 입력 자체를 문맥에 맞게 자연스럽게 사용하세요.\n${commonRules}\n[출력 형식]\n정확히 ${totalSets*4}줄만 출력하세요. 각 세트는 4줄입니다.\n1줄 일본어 문장\n2줄 후리가나\n3줄 직역에 가까운 한국어\n4줄 자연스러운 한국어\n`;
     } else {
-      const count = words.length;
-      totalSets = count === 1 ? 3 : count === 2 ? 4 : count;
-      const inputText = words.map((w,i)=>`${i+1}. ${w}`).join('\n');
-      prompt = `다음 입력을 활용해 실제 일본어 회화처럼 자연스러운 2인 대화 ${totalSets}세트를 만드세요.\n입력 목록:\n${inputText}\n`;
-      prompt += `각 세트는 서로 다른 상황과 표현을 사용하세요. 각 세트에는 두 사람이 한 번씩 말하는 2개의 일본어 대사가 있어야 합니다. 입력된 표현은 대화의 핵심이 되도록 자연스럽게 사용하세요.\n${commonRules}\n[대화 출력 형식 - 매우 중요]\n정확히 ${totalSets*8}줄만 출력하세요. 각 세트는 8줄입니다.\n1줄 첫 번째 사람의 일본어 대사\n2줄 첫 번째 대사의 후리가나\n3줄 첫 번째 대사의 직역에 가까운 한국어\n4줄 첫 번째 대사의 자연스러운 한국어\n5줄 두 번째 사람의 일본어 대사\n6줄 두 번째 대사의 후리가나\n7줄 두 번째 대사의 직역에 가까운 한국어\n8줄 두 번째 대사의 자연스러운 한국어\n`;
+      if (paired) {
+        totalSets = pairCount;
+        const pairs = leftWords.map((w,i) => `${i+1}. V: ${w} / W: ${rightWords[i]}`).join('\n');
+        prompt = `다음 V/W 입력을 같은 번호끼리 한 쌍으로 사용해 실제 일본어 회화처럼 자연스러운 2인 대화 ${totalSets}세트를 만드세요.\n각 세트에서 해당 번호의 V 입력과 W 입력을 모두 자연스럽게 사용하세요.\n대상 표시 [[...]]는 V 입력을 나타내는 부분에 한 번만 붙이세요.\n입력 목록:\n${pairs}`;
+      } else {
+        totalSets = singleWords.length === 1 ? 3 : singleWords.length === 2 ? 4 : singleWords.length;
+        prompt = `다음 입력을 활용해 실제 일본어 회화처럼 자연스러운 2인 대화 ${totalSets}세트를 만드세요.\n입력 목록:\n${singleWords.map((w,i)=>`${i+1}. ${w}`).join('\n')}`;
+      }
+      prompt += `\n각 세트는 서로 다른 상황과 표현을 사용하세요. 각 세트에는 두 사람이 한 번씩 말하는 2개의 일본어 대사가 있어야 합니다. 입력된 표현은 대화의 핵심이 되도록 자연스럽게 사용하세요.\n${commonRules}\n[대화 출력 형식 - 매우 중요]\n정확히 ${totalSets*8}줄만 출력하세요. 각 세트는 8줄입니다.\n1줄 첫 번째 사람의 일본어 대사\n2줄 첫 번째 대사의 후리가나\n3줄 첫 번째 대사의 직역에 가까운 한국어\n4줄 첫 번째 대사의 자연스러운 한국어\n5줄 두 번째 사람의 일본어 대사\n6줄 두 번째 대사의 후리가나\n7줄 두 번째 대사의 직역에 가까운 한국어\n8줄 두 번째 대사의 자연스러운 한국어\n`;
     }
 
     try {
       const json = await callGeminiAPI(prompt, 0.85);
-      if (!json || json.error) {
-        alert(`⚠️ API 오류 발생:\n${json?.error?.message || "응답을 받지 못했습니다."}`);
-        return;
-      }
-      const badge = document.getElementById('modelBadge');
-      badge.innerText = `Gemini ${json.usedModel || ""}`;
-      badge.style.display = 'inline-block';
+      if (!json || json.error) { alert(`⚠️ API 오류 발생:\n${json?.error?.message || '응답을 받지 못했습니다.'}`); return; }
+      const badge = document.getElementById('modelBadge'); badge.innerText = `Gemini ${json.usedModel || ''}`; badge.style.display = 'inline-block';
       const generatedText = json?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-      if (!generatedText) throw new Error("Gemini 응답에 예문 내용이 없습니다.");
-
+      if (!generatedText) throw new Error('Gemini 응답에 예문 내용이 없습니다.');
       const lines = generatedText.split(/\r?\n/).map(l => l.replace(/^\s*\d+[\.\)]\s*/, '').trim()).filter(Boolean);
       const examples = [];
-
       if (mode === 'dialogue') {
         for (let i=0; i+7<lines.length; i+=8) {
-          const aJ = lines[i], aF = lines[i+1], aK = lines[i+3];
-          const bJ = lines[i+4], bF = lines[i+5], bK = lines[i+7];
-          examples.push({
-            dialogue: true,
-            turns: [
-              { japanese:aJ.replace(/\[\[|\]\]/g,''), japaneseWithMarker:aJ, furigana:aF, rubyHtml:convertToInteractiveRuby(aJ,aF,examples.length*2), korean:aK },
-              { japanese:bJ.replace(/\[\[|\]\]/g,''), japaneseWithMarker:bJ, furigana:bF, rubyHtml:convertToInteractiveRuby(bJ,bF,examples.length*2+1), korean:bK }
-            ]
-          });
+          const aJ=lines[i], aF=lines[i+1], aK=lines[i+3], bJ=lines[i+4], bF=lines[i+5], bK=lines[i+7];
+          examples.push({dialogue:true, turns:[
+            {japanese:aJ.replace(/\[\[|\]\]/g,''), japaneseWithMarker:aJ, furigana:aF, rubyHtml:convertToInteractiveRuby(aJ,aF,examples.length*2), korean:aK},
+            {japanese:bJ.replace(/\[\[|\]\]/g,''), japaneseWithMarker:bJ, furigana:bF, rubyHtml:convertToInteractiveRuby(bJ,bF,examples.length*2+1), korean:bK}
+          ]});
         }
       } else {
         for (let i=0; i+3<lines.length; i+=4) {
-          const japaneseWithMarker = lines[i];
-          const markerMatch = japaneseWithMarker.match(/\[\[([\s\S]*?)\]\]/);
+          const japaneseWithMarker=lines[i], markerMatch=japaneseWithMarker.match(/\[\[([\s\S]*?)\]\]/);
           if (!markerMatch) continue;
-          examples.push({
-            japanese: japaneseWithMarker.replace(/\[\[|\]\]/g,''),
-            japaneseWithMarker,
-            furigana: lines[i+1],
-            rubyHtml: convertToInteractiveRuby(japaneseWithMarker, lines[i+1], i/4),
-            korean: lines[i+2] || '',
-            targetWord: markerMatch[1]
-          });
+          examples.push({japanese:japaneseWithMarker.replace(/\[\[|\]\]/g,''), japaneseWithMarker, furigana:lines[i+1], rubyHtml:convertToInteractiveRuby(japaneseWithMarker,lines[i+1],i/4), korean:lines[i+2]||'', targetWord:markerMatch[1]});
         }
       }
-      if (!examples.length) throw new Error("생성된 내용을 화면 형식으로 변환하지 못했습니다.");
-
-      // 생성된 결과의 '세트' 자체를 랜덤하게 섞습니다.
-      // 대화는 두 문장을 한 세트로 유지한 채 세트 단위로만 섞습니다.
-      for (let i = examples.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [examples[i], examples[j]] = [examples[j], examples[i]];
-      }
-
-      // 랜덤화 후 iOS 후리가나/문장 토글용 인덱스를 현재 표시 순서에 맞게 다시 생성합니다.
-      if (mode === 'dialogue') {
-        examples.forEach((item, index) => {
-          item.turns.forEach((turn, t) => {
-            turn.rubyHtml = convertToInteractiveRuby(turn.japaneseWithMarker || turn.japanese, turn.furigana || '', index * 2 + t);
-          });
-        });
-      } else {
-        examples.forEach((item, index) => {
-          item.rubyHtml = convertToInteractiveRuby(item.japaneseWithMarker || item.japanese, item.furigana || '', index);
-        });
-      }
-
+      if (!examples.length) throw new Error('생성된 내용을 화면 형식으로 변환하지 못했습니다.');
+      for (let i=examples.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [examples[i],examples[j]]=[examples[j],examples[i]]; }
+      if (mode === 'dialogue') examples.forEach((item,index)=>item.turns.forEach((turn,t)=>turn.rubyHtml=convertToInteractiveRuby(turn.japaneseWithMarker||turn.japanese,turn.furigana||'',index*2+t)));
+      else examples.forEach((item,index)=>item.rubyHtml=convertToInteractiveRuby(item.japaneseWithMarker||item.japanese,item.furigana||'',index));
       renderExamples(examples, mode);
-    } catch (e) {
-      console.error("예문 처리 오류:", e);
-      alert(`처리 오류: ${e.message || e.toString()}`);
-    } finally {
-      buttons.forEach(btn => { if (btn) btn.disabled = false; });
-    }
+    } catch (e) { console.error('예문 처리 오류:',e); alert(`처리 오류: ${e.message || e.toString()}`); }
+    finally { buttons.forEach(btn => { if (btn) btn.disabled = false; }); }
   }
 
-  /* 첫 번째 코드의 HTML 구조 적용 (sentence-body span 및 숨김 방식) */
   function renderExamples(examples, mode) {
     const container = document.getElementById('examplesContainer');
     audioList = [];
