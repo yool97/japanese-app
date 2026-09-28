@@ -1266,12 +1266,21 @@ document.addEventListener('DOMContentLoaded', function () {
     display.textContent = value || '0';
   }
 
+  function updateNavigationButtons() {
+    const index = activeField ? fieldIds.indexOf(activeField.id) : -1;
+    const prevButton = keypad.querySelector('[data-key=\"prev\"]');
+    const nextButton = keypad.querySelector('[data-key=\"next\"]');
+    if (prevButton) prevButton.disabled = index <= 0;
+    if (nextButton) nextButton.disabled = index < 0 || index >= fieldIds.length - 1;
+  }
+
   function openKeypad(field) {
     activeField = field;
     keypad.classList.add('show');
     keypad.setAttribute('aria-hidden', 'false');
     document.body.classList.add('range-keypad-open');
     updateDisplay();
+    updateNavigationButtons();
   }
 
   function closeKeypad() {
@@ -1316,6 +1325,17 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!button || !activeField) return;
 
     const key = button.getAttribute('data-key');
+
+    if (key === 'prev' || key === 'next') {
+      const index = fieldIds.indexOf(activeField.id);
+      const nextIndex = key === 'prev' ? index - 1 : index + 1;
+      if (nextIndex >= 0 && nextIndex < fieldIds.length) {
+        const nextField = document.getElementById(fieldIds[nextIndex]);
+        if (nextField) openKeypad(nextField);
+      }
+      return;
+    }
+
     let value = String(activeField.value || '');
 
     if (key === 'delete') {
@@ -1337,6 +1357,14 @@ document.addEventListener('DOMContentLoaded', function () {
     activeField.value = value;
     updateDisplay();
     notifyFieldChanged(activeField);
+  });
+
+  // Touching/clicking anywhere outside the numeric inputs and keypad closes it.
+  document.addEventListener('pointerdown', function (e) {
+    if (!activeField) return;
+    const target = e.target;
+    if (target.closest('#rangeKeypad') || target.closest('#vRangeStart, #vRangeEnd, #wRangeStart, #wRangeEnd')) return;
+    closeKeypad();
   });
 
   // Prevent an accidental native keyboard invocation through programmatic focus.
@@ -1361,6 +1389,8 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="range-keypad-display-row">
       <div id="rangeKeypadDisplay" class="range-keypad-display">0</div>
       <button type="button" class="key-clear-all" data-key="clear">전체삭제</button>
+      <button type="button" class="key-nav" data-key="prev">이전</button>
+      <button type="button" class="key-nav" data-key="next">다음</button>
     </div>
     <div class="range-keypad-grid">
       <button type="button" data-key="1">1</button>
