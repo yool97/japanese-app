@@ -316,6 +316,12 @@
     .sheet-input-title .sheet-name { color:#1a73e8; }
     .sheet-input-panel textarea { height:140px; margin-bottom:6px; }
     .sheet-range-row { display:flex; align-items:center; gap:5px; margin:0 0 8px; }
+
+    /* 숫자패드에서 현재 입력 중인 숫자창 표시 */
+    .sheet-range-row input.keypad-active {
+      background-color: #fff8d6 !important;
+      border-color: #f1c232 !important;
+    }
     .sheet-range-row input { width:64px; min-width:0; box-sizing:border-box; padding:8px 6px; border:1px solid #dadce0; border-radius:6px; font-size:14px; text-align:center; }
     .sheet-range-row span { color:#5f6368; font-size:14px; }
     .sheet-range-row .range-btn { flex:1; min-width:0; padding:8px 6px; border:0; border-radius:6px; background:#f1f3f4; color:#202124; font-size:12px; cursor:pointer; }
@@ -1281,7 +1287,12 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function openKeypad(field) {
+    fieldIds.forEach(function (id) {
+      const f = document.getElementById(id);
+      if (f) f.classList.remove('keypad-active');
+    });
     activeField = field;
+    if (activeField) activeField.classList.add('keypad-active');
     keypad.classList.add('show');
     keypad.setAttribute('aria-hidden', 'false');
     document.body.classList.add('range-keypad-open');
@@ -1290,6 +1301,10 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function closeKeypad() {
+    fieldIds.forEach(function (id) {
+      const f = document.getElementById(id);
+      if (f) f.classList.remove('keypad-active');
+    });
     activeField = null;
     keypad.classList.remove('show');
     keypad.setAttribute('aria-hidden', 'true');
