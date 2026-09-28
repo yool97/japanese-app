@@ -333,7 +333,83 @@
     .dialogue-turn { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:7px 0; border-top:1px solid #eee; }
     .dialogue-turn:first-of-type { border-top:none; }
     .dialogue-text { flex:1; min-width:0; }
-  </style>
+  
+/* ===== Custom web keypad for V/W range inputs ===== */
+#rangeKeypad {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99999;
+  display: none;
+  padding: 10px max(10px, env(safe-area-inset-left))
+           calc(10px + env(safe-area-inset-bottom))
+           max(10px, env(safe-area-inset-right));
+  background: rgba(245,245,245,.98);
+  border-top: 1px solid #cfcfcf;
+  box-shadow: 0 -4px 18px rgba(0,0,0,.16);
+  box-sizing: border-box;
+  touch-action: manipulation;
+  user-select: none;
+}
+#rangeKeypad.show {
+  display: block;
+}
+#rangeKeypad .range-keypad-inner {
+  width: min(520px, 100%);
+  margin: 0 auto;
+}
+#rangeKeypad .range-keypad-display {
+  height: 42px;
+  margin-bottom: 8px;
+  padding: 0 14px;
+  border: 1px solid #bbb;
+  border-radius: 9px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 22px;
+  font-weight: 700;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+#rangeKeypad .range-keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+#rangeKeypad button {
+  height: 52px;
+  border: 1px solid #bbb;
+  border-radius: 9px;
+  background: #fff;
+  color: #222;
+  font-size: 21px;
+  font-weight: 700;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+#rangeKeypad button:active {
+  background: #e5e5e5;
+  transform: translateY(1px);
+}
+#rangeKeypad .key-delete {
+  font-size: 22px;
+}
+#rangeKeypad .key-confirm {
+  background: #333;
+  color: #fff;
+  border-color: #333;
+}
+#rangeKeypad .key-confirm:active {
+  background: #111;
+}
+body.range-keypad-open {
+  padding-bottom: 300px;
+}
+
+</style>
 </head>
 <body>
 
@@ -360,9 +436,9 @@
         <textarea id="inputTextLeft" placeholder="V 시트 단어
 직접 입력도 가능"></textarea>
         <div class="sheet-range-row">
-          <input type="text" id="vRangeStart" inputmode="numeric" pattern="[0-9]*" placeholder="시작" aria-label="V 시트 시작 행">
+          <input type="text" id="vRangeStart" autocomplete="off" readonly placeholder="시작" aria-label="V 시트 시작 행" inputmode="none">
           <span>~</span>
-          <input type="text" id="vRangeEnd" inputmode="numeric" pattern="[0-9]*" placeholder="끝" aria-label="V 시트 끝 행">
+          <input type="text" id="vRangeEnd" autocomplete="off" readonly placeholder="끝" aria-label="V 시트 끝 행" inputmode="none">
           <button class="range-btn" id="btnVRange" onclick="fetchSheetRange('V')">V 불러오기</button>
         </div>
       </div>
@@ -372,9 +448,9 @@
         <textarea id="inputTextRight" placeholder="W 시트 단어
 직접 입력도 가능"></textarea>
         <div class="sheet-range-row">
-          <input type="text" id="wRangeStart" inputmode="numeric" pattern="[0-9]*" placeholder="시작" aria-label="W 시트 시작 행">
+          <input type="text" id="wRangeStart" autocomplete="off" readonly placeholder="시작" aria-label="W 시트 시작 행" inputmode="none">
           <span>~</span>
-          <input type="text" id="wRangeEnd" inputmode="numeric" pattern="[0-9]*" placeholder="끝" aria-label="W 시트 끝 행">
+          <input type="text" id="wRangeEnd" autocomplete="off" readonly placeholder="끝" aria-label="W 시트 끝 행" inputmode="none">
           <button class="range-btn" id="btnWRange" onclick="fetchSheetRange('W')">W 불러오기</button>
         </div>
       </div>
@@ -382,7 +458,7 @@
 
     <div class="btn-group">
       <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
-      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">문장</button>
+      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어만큼</button>
       <button class="main-btn" id="btnDialogue" onclick="processWords('dialogue')" style="background-color: #34a853;">대화</button>
     </div>
   </div>
@@ -1154,6 +1230,128 @@
 
   // 기존 함수명 호환
   function requestAudio(index) { requestGoogleAudio(index); }
+
+/* ===== Bottom-fixed custom numeric keypad logic ===== */
+(function () {
+  const fieldIds = ['vRangeStart', 'vRangeEnd', 'wRangeStart', 'wRangeEnd'];
+  const keypad = document.getElementById('rangeKeypad');
+  const display = document.getElementById('rangeKeypadDisplay');
+  let activeField = null;
+
+  function getFieldValue() {
+    return activeField ? String(activeField.value || '') : '';
+  }
+
+  function updateDisplay() {
+    const value = getFieldValue();
+    display.textContent = value || '0';
+  }
+
+  function openKeypad(field) {
+    activeField = field;
+    keypad.classList.add('show');
+    keypad.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('range-keypad-open');
+    updateDisplay();
+  }
+
+  function closeKeypad() {
+    activeField = null;
+    keypad.classList.remove('show');
+    keypad.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('range-keypad-open');
+  }
+
+  function notifyFieldChanged(field) {
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  fieldIds.forEach(function (id) {
+    const field = document.getElementById(id);
+    if (!field) return;
+
+    // readonly prevents the native keyboard; these events only select our field.
+    field.setAttribute('readonly', 'readonly');
+    field.setAttribute('inputmode', 'none');
+
+    field.addEventListener('focus', function () {
+      // Immediately blur so iOS/iPadOS/Android native keyboards are not invoked.
+      field.blur();
+      openKeypad(field);
+    });
+
+    field.addEventListener('click', function (e) {
+      e.preventDefault();
+      openKeypad(field);
+    });
+
+    field.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      openKeypad(field);
+    }, { passive: false });
+  });
+
+  keypad.addEventListener('click', function (e) {
+    const button = e.target.closest('button[data-key]');
+    if (!button || !activeField) return;
+
+    const key = button.getAttribute('data-key');
+    let value = String(activeField.value || '');
+
+    if (key === 'delete') {
+      value = value.slice(0, -1);
+    } else if (key === 'confirm') {
+      if (value !== '') {
+        notifyFieldChanged(activeField);
+      }
+      closeKeypad();
+      return;
+    } else if (/^\d$/.test(key)) {
+      // Keep only digits and avoid leading-zero accumulation.
+      value = (value + key).replace(/\D/g, '');
+      if (value.length > 1) value = value.replace(/^0+/, '') || '0';
+    }
+
+    activeField.value = value;
+    updateDisplay();
+    notifyFieldChanged(activeField);
+  });
+
+  // Prevent an accidental native keyboard invocation through programmatic focus.
+  document.addEventListener('focusin', function (e) {
+    if (!activeField && e.target && fieldIds.includes(e.target.id)) {
+      e.target.blur();
+      openKeypad(e.target);
+    }
+  });
+
+  // Expose a small helper in case existing app code needs to close the keypad.
+  window.closeRangeKeypad = closeKeypad;
+})();
+
 </script>
+
+<!-- ===== Bottom-fixed custom numeric keypad ===== -->
+<div id="rangeKeypad" aria-hidden="true">
+  <div class="range-keypad-inner">
+    <div id="rangeKeypadDisplay" class="range-keypad-display">0</div>
+    <div class="range-keypad-grid">
+      <button type="button" data-key="1">1</button>
+      <button type="button" data-key="2">2</button>
+      <button type="button" data-key="3">3</button>
+      <button type="button" data-key="4">4</button>
+      <button type="button" data-key="5">5</button>
+      <button type="button" data-key="6">6</button>
+      <button type="button" data-key="7">7</button>
+      <button type="button" data-key="8">8</button>
+      <button type="button" data-key="9">9</button>
+      <button type="button" class="key-delete" data-key="delete">←</button>
+      <button type="button" data-key="0">0</button>
+      <button type="button" class="key-confirm" data-key="confirm">✓</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
