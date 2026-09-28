@@ -458,7 +458,7 @@ body.range-keypad-open {
 
     <div class="btn-group">
       <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
-      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어만큼</button>
+      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">문장</button>
       <button class="main-btn" id="btnDialogue" onclick="processWords('dialogue')" style="background-color: #34a853;">대화</button>
     </div>
   </div>
@@ -1232,6 +1232,7 @@ body.range-keypad-open {
   function requestAudio(index) { requestGoogleAudio(index); }
 
 /* ===== Bottom-fixed custom numeric keypad logic ===== */
+document.addEventListener('DOMContentLoaded', function () {
 (function () {
   const fieldIds = ['vRangeStart', 'vRangeEnd', 'wRangeStart', 'wRangeEnd'];
   const keypad = document.getElementById('rangeKeypad');
@@ -1329,6 +1330,8 @@ body.range-keypad-open {
   // Expose a small helper in case existing app code needs to close the keypad.
   window.closeRangeKeypad = closeKeypad;
 })();
+});
+
 
 </script>
 
