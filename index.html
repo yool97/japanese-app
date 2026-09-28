@@ -380,7 +380,8 @@
   box-sizing: border-box;
   overflow: hidden;
 }
-#rangeKeypad .key-clear-all {
+#rangeKeypad .key-clear-all,
+#rangeKeypad .key-nav {
   width: 82px;
   height: 42px;
   border: 1px solid #bbb;
@@ -476,7 +477,7 @@ body.range-keypad-open {
 
     <div class="btn-group">
       <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
-      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어 만큼</button>
+      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어만큼</button>
       <button class="main-btn" id="btnDialogue" onclick="processWords('dialogue')" style="background-color: #34a853;">대화</button>
     </div>
   </div>
