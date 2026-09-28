@@ -360,9 +360,9 @@
         <textarea id="inputTextLeft" placeholder="V 시트 단어
 직접 입력도 가능"></textarea>
         <div class="sheet-range-row">
-          <input type="tel" id="vRangeStart" min="1" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="시작" aria-label="V 시트 시작 행">
+          <input type="text" id="vRangeStart" inputmode="numeric" pattern="[0-9]*" placeholder="시작" aria-label="V 시트 시작 행">
           <span>~</span>
-          <input type="tel" id="vRangeEnd" min="1" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="끝" aria-label="V 시트 끝 행">
+          <input type="text" id="vRangeEnd" inputmode="numeric" pattern="[0-9]*" placeholder="끝" aria-label="V 시트 끝 행">
           <button class="range-btn" id="btnVRange" onclick="fetchSheetRange('V')">V 불러오기</button>
         </div>
       </div>
@@ -372,9 +372,9 @@
         <textarea id="inputTextRight" placeholder="W 시트 단어
 직접 입력도 가능"></textarea>
         <div class="sheet-range-row">
-          <input type="tel" id="wRangeStart" min="1" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="시작" aria-label="W 시트 시작 행">
+          <input type="text" id="wRangeStart" inputmode="numeric" pattern="[0-9]*" placeholder="시작" aria-label="W 시트 시작 행">
           <span>~</span>
-          <input type="tel" id="wRangeEnd" min="1" step="1" inputmode="numeric" pattern="[0-9]*" placeholder="끝" aria-label="W 시트 끝 행">
+          <input type="text" id="wRangeEnd" inputmode="numeric" pattern="[0-9]*" placeholder="끝" aria-label="W 시트 끝 행">
           <button class="range-btn" id="btnWRange" onclick="fetchSheetRange('W')">W 불러오기</button>
         </div>
       </div>
@@ -382,7 +382,7 @@
 
     <div class="btn-group">
       <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
-      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어만큼</button>
+      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">문장</button>
       <button class="main-btn" id="btnDialogue" onclick="processWords('dialogue')" style="background-color: #34a853;">대화</button>
     </div>
   </div>
