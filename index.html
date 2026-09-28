@@ -489,7 +489,7 @@ body.range-keypad-open {
   // iOS 기기 여부 감지
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx_BZ_jbhmbFQNNyh3lU6k_aBKuaVQSqxq0eFiHB9d-KgMuKoXtZQofjan8M6Bu4YKyng/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwirM9qGhChPucJAgb0pRbFvbTL0-Q_6S8AgIS20gBTQGoqTGCCYTBqATA2GD_L1FFtXQ/exec';
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
@@ -664,6 +664,8 @@ body.range-keypad-open {
       .replace(/\[\[|\]\]/g, "")
       .replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, "$1")
       .replace(/<[^>]*>/g, "")
+      // 앞 단계에서 처리되지 않고 남은 대괄호도 TTS 직전에 제거
+      .replace(/[\[\]]/g, "")
       .trim();
 
     for (const word in dynamicDictionary) {
