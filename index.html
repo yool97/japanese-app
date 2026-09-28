@@ -359,9 +359,15 @@
   width: min(520px, 100%);
   margin: 0 auto;
 }
-#rangeKeypad .range-keypad-display {
+#rangeKeypad .range-keypad-display-row {
+  display: flex;
+  gap: 7px;
   height: 42px;
   margin-bottom: 8px;
+}
+#rangeKeypad .range-keypad-display {
+  flex: 1;
+  min-width: 0;
   padding: 0 14px;
   border: 1px solid #bbb;
   border-radius: 9px;
@@ -374,9 +380,21 @@
   box-sizing: border-box;
   overflow: hidden;
 }
+#rangeKeypad .key-clear-all {
+  width: 82px;
+  height: 42px;
+  border: 1px solid #bbb;
+  border-radius: 9px;
+  background: #fff;
+  color: #222;
+  font-size: 13px;
+  font-weight: 700;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
 #rangeKeypad .range-keypad-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 7px;
 }
 #rangeKeypad button {
@@ -396,9 +414,6 @@
 }
 #rangeKeypad .key-delete {
   font-size: 22px;
-}
-#rangeKeypad .key-clear {
-  font-size: 15px;
 }
 #rangeKeypad .key-confirm {
   background: #333;
@@ -461,7 +476,7 @@ body.range-keypad-open {
 
     <div class="btn-group">
       <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
-      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어만큼</button>
+      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어 만큼</button>
       <button class="main-btn" id="btnDialogue" onclick="processWords('dialogue')" style="background-color: #34a853;">대화</button>
     </div>
   </div>
@@ -1343,7 +1358,10 @@ document.addEventListener('DOMContentLoaded', function () {
 <!-- ===== Bottom-fixed custom numeric keypad ===== -->
 <div id="rangeKeypad" aria-hidden="true">
   <div class="range-keypad-inner">
-    <div id="rangeKeypadDisplay" class="range-keypad-display">0</div>
+    <div class="range-keypad-display-row">
+      <div id="rangeKeypadDisplay" class="range-keypad-display">0</div>
+      <button type="button" class="key-clear-all" data-key="clear">전체삭제</button>
+    </div>
     <div class="range-keypad-grid">
       <button type="button" data-key="1">1</button>
       <button type="button" data-key="2">2</button>
@@ -1355,7 +1373,6 @@ document.addEventListener('DOMContentLoaded', function () {
       <button type="button" data-key="8">8</button>
       <button type="button" data-key="9">9</button>
       <button type="button" class="key-delete" data-key="delete">←</button>
-      <button type="button" class="key-clear" data-key="clear">전체삭제</button>
       <button type="button" data-key="0">0</button>
       <button type="button" class="key-confirm" data-key="confirm">✓</button>
     </div>
