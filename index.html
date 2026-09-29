@@ -495,7 +495,7 @@ body.range-keypad-open {
   // iOS 기기 여부 감지
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyV3eoKIP62W0QZuhRG1zebMUQZRcB5NXPNFSUidiJpgdpQocBrytybCveDvhtFtK4CJA/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzqnitfHG1oz540fgDMQIkh4c3YqkQlH5eysHVJr8FcdW7MpkpzpzOp3EeQszBa01g6fg/exec';
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
@@ -578,6 +578,71 @@ body.range-keypad-open {
     } catch (e) { console.warn('저장된 시트 범위 읽기 실패:', e); }
   }
 
+  // 서버(GAS)의 V/W 범위를 모든 기기에서 공통으로 사용합니다.
+  // 서버에 값이 없을 때만 기존 브라우저 저장값을 한 번 서버로 이전합니다.
+  async function loadSharedSheetRanges() {
+    if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) return;
+
+    try {
+      const response = await fetch(`${GAS_WEB_APP_URL}?rangeConfig=load&t=${Date.now()}`);
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+
+      const vStart = document.getElementById('vRangeStart');
+      const vEnd = document.getElementById('vRangeEnd');
+      const wStart = document.getElementById('wRangeStart');
+      const wEnd = document.getElementById('wRangeEnd');
+
+      const hasServerValue = [data.vStart, data.vEnd, data.wStart, data.wEnd]
+        .some(value => String(value || '').trim() !== '');
+
+      if (hasServerValue) {
+        if (vStart) vStart.value = data.vStart || '';
+        if (vEnd) vEnd.value = data.vEnd || '';
+        if (wStart) wStart.value = data.wStart || '';
+        if (wEnd) wEnd.value = data.wEnd || '';
+        saveSheetRangeInputs('V');
+        saveSheetRangeInputs('W');
+      } else {
+        // 기존 기기에 저장된 값이 있다면 첫 실행 시 서버로 이전합니다.
+        restoreSavedSheetRanges();
+        await saveSharedSheetRanges();
+      }
+    } catch (e) {
+      // 서버 접속에 실패한 경우 기존 브라우저 저장값을 사용합니다.
+      console.warn('공통 시트 범위 불러오기 실패:', e);
+      restoreSavedSheetRanges();
+    }
+  }
+
+  let sharedRangeSaveTimer = null;
+
+  function scheduleSaveSharedSheetRanges() {
+    clearTimeout(sharedRangeSaveTimer);
+    sharedRangeSaveTimer = setTimeout(saveSharedSheetRanges, 300);
+  }
+
+  async function saveSharedSheetRanges() {
+    if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) return;
+
+    const params = new URLSearchParams({
+      rangeConfig: 'save',
+      vStart: document.getElementById('vRangeStart')?.value || '',
+      vEnd: document.getElementById('vRangeEnd')?.value || '',
+      wStart: document.getElementById('wRangeStart')?.value || '',
+      wEnd: document.getElementById('wRangeEnd')?.value || '',
+      t: String(Date.now())
+    });
+
+    try {
+      const response = await fetch(`${GAS_WEB_APP_URL}?${params.toString()}`);
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+    } catch (e) {
+      console.warn('공통 시트 범위 저장 실패:', e);
+    }
+  }
+
   async function fetchSheetRange(sheetName) {
     const prefix = sheetName === 'V' ? 'v' : 'w';
     const inputArea = document.getElementById(sheetName === 'V' ? 'inputTextLeft' : 'inputTextRight');
@@ -586,6 +651,7 @@ body.range-keypad-open {
     const rangeBtn = document.getElementById(sheetName === 'V' ? 'btnVRange' : 'btnWRange');
     const start = Number(startInput.value), end = Number(endInput.value);
     saveSheetRangeInputs(sheetName);
+    scheduleSaveSharedSheetRanges();
     if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start) {
       alert(`${sheetName} 시트의 시작 행과 끝 행을 올바르게 입력해주세요.`); return;
     }
@@ -612,11 +678,21 @@ body.range-keypad-open {
     } finally { rangeBtn.disabled = false; rangeBtn.innerText = `${sheetName} 불러오기`; }
   }
 
-  window.addEventListener('DOMContentLoaded', () => {
-    restoreSavedApiKey(); restoreSavedSheetRanges();
+  window.addEventListener('DOMContentLoaded', async () => {
+    restoreSavedApiKey();
+
     [['vRangeStart','V'],['vRangeEnd','V'],['wRangeStart','W'],['wRangeEnd','W']].forEach(([id,sheet]) => {
-      const el = document.getElementById(id); if (el) el.addEventListener('input', () => saveSheetRangeInputs(sheet));
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', () => {
+          saveSheetRangeInputs(sheet);
+          scheduleSaveSharedSheetRanges();
+        });
+      }
     });
+
+    // 페이지가 열리면 별도 버튼 없이 서버의 공통 범위를 자동으로 불러옵니다.
+    await loadSharedSheetRanges();
   });
   window.addEventListener('load', restoreSavedApiKey);
 
