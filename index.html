@@ -97,6 +97,7 @@
     .btn-group { display: flex; gap: 10px; }
     button.main-btn {
       flex: 1;
+      height: 60px;
       background-color: #1a73e8;
       color: #ffffff;
       border: none;
@@ -329,12 +330,12 @@
       background-color: #e6f4ea !important;
       border-color: #81c995 !important;
     }
-    .sheet-range-row input { width:64px; min-width:0; box-sizing:border-box; padding:8px 6px; border:1px solid #dadce0; border-radius:6px; font-size:14px; text-align:center; }
+    .sheet-range-row input { width:64px; height:51px; min-width:0; box-sizing:border-box; padding:8px 6px; border:1px solid #dadce0; border-radius:6px; font-size:14px; text-align:center; }
     .sheet-range-row span { color:#5f6368; font-size:14px; }
-    .sheet-range-row .range-btn { flex:1; min-width:0; padding:8px 6px; border:0; border-radius:6px; background:#f1f3f4; color:#202124; font-size:12px; cursor:pointer; }
+    .sheet-range-row .range-btn { flex:1; min-width:0; height:51px; padding:8px 6px; border:0; border-radius:6px; background:#f1f3f4; color:#202124; font-size:12px; cursor:pointer; }
     .sheet-range-row .range-btn:disabled { opacity:.6; cursor:default; }
     .range-save-row { display:flex; gap:8px; margin:0 0 10px; }
-    .range-save-row button { flex:1; min-width:0; padding:9px 8px; border:1px solid #dadce0; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; }
+    .range-save-row button { flex:1; min-width:0; height:54px; padding:9px 8px; border:1px solid #dadce0; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; }
     .range-save-btn { background:#e8f0fe; color:#1a73e8; }
     .range-load-btn { background:#f1f3f4; color:#3c4043; }
     .range-save-row button:disabled { opacity:.6; cursor:default; }
@@ -512,7 +513,7 @@ body.range-keypad-open {
   // iOS 기기 여부 감지
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx2zjX98FjkPsUXtwYipNAUaVyIudoRmA7JVTBhrhuZGh03Ma-MlyuQNKuKCrnkOGnL8g/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzp82cMAcPSBtd83dF5mPHGd4n73lqtBpn6NGJ4pQNunU53wBi8TQG8ozPicfDx33msJg/exec';
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
