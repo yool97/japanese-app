@@ -317,10 +317,17 @@
     .sheet-input-panel textarea { height:140px; margin-bottom:6px; }
     .sheet-range-row { display:flex; align-items:center; gap:5px; margin:0 0 8px; }
 
-    /* 숫자패드에서 현재 입력 중인 숫자창 표시 */
+    /* 숫자 입력 상태 표시 */
+    .sheet-range-row input {
+      background-color: #fff !important;
+    }
     .sheet-range-row input.keypad-active {
       background-color: #fff8d6 !important;
       border-color: #f1c232 !important;
+    }
+    .sheet-range-row input.range-save-complete {
+      background-color: #e6f4ea !important;
+      border-color: #81c995 !important;
     }
     .sheet-range-row input { width:64px; min-width:0; box-sizing:border-box; padding:8px 6px; border:1px solid #dadce0; border-radius:6px; font-size:14px; text-align:center; }
     .sheet-range-row span { color:#5f6368; font-size:14px; }
@@ -505,7 +512,7 @@ body.range-keypad-open {
   // iOS 기기 여부 감지
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzqnitfHG1oz540fgDMQIkh4c3YqkQlH5eysHVJr8FcdW7MpkpzpzOp3EeQszBa01g6fg/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx2zjX98FjkPsUXtwYipNAUaVyIudoRmA7JVTBhrhuZGh03Ma-MlyuQNKuKCrnkOGnL8g/exec';
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
@@ -553,10 +560,27 @@ body.range-keypad-open {
     if (savedKey) input.value = savedKey;
   }
 
+  const RANGE_INPUT_IDS = ['vRangeStart', 'vRangeEnd', 'wRangeStart', 'wRangeEnd'];
+
+  function setRangeInputsStatus(status) {
+    RANGE_INPUT_IDS.forEach(function (id) {
+      const input = document.getElementById(id);
+      if (!input) return;
+      input.classList.remove('range-save-complete');
+      if (status === 'white') {
+        input.style.backgroundColor = '#fff';
+      } else if (status === 'green') {
+        input.style.backgroundColor = '#e6f4ea';
+        input.classList.add('range-save-complete');
+      }
+    });
+  }
+
   // V/W 시트의 시작행·끝행은 저장하기 버튼을 눌렀을 때만 서버에 저장하고,
   // 불러오기 버튼을 눌렀을 때만 서버에서 가져옵니다.
   // 입력 중에는 서버 통신을 하지 않습니다.
   async function loadSharedSheetRanges() {
+    setRangeInputsStatus('white');
     const loadBtn = document.getElementById('btnLoadRanges');
     if (loadBtn) {
       loadBtn.disabled = true;
@@ -582,7 +606,7 @@ body.range-keypad-open {
       if (wStart) wStart.value = data.wStart || '';
       if (wEnd) wEnd.value = data.wEnd || '';
 
-      alert('저장된 시작행·끝행을 불러왔습니다.');
+      setRangeInputsStatus('green');
     } catch (e) {
       console.error('공통 시트 범위 불러오기 실패:', e);
       alert('저장된 시작행·끝행을 불러오지 못했습니다.\n' + (e.message || ''));
@@ -595,6 +619,7 @@ body.range-keypad-open {
   }
 
   async function saveSharedSheetRanges() {
+    setRangeInputsStatus('white');
     const saveBtn = document.getElementById('btnSaveRanges');
     if (saveBtn) {
       saveBtn.disabled = true;
@@ -619,7 +644,7 @@ body.range-keypad-open {
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
-      alert('시작행·끝행이 서버에 저장되었습니다.');
+      setRangeInputsStatus('green');
     } catch (e) {
       console.error('공통 시트 범위 저장 실패:', e);
       alert('시작행·끝행을 서버에 저장하지 못했습니다.\n' + (e.message || ''));
@@ -1338,10 +1363,17 @@ document.addEventListener('DOMContentLoaded', function () {
   function openKeypad(field) {
     fieldIds.forEach(function (id) {
       const f = document.getElementById(id);
-      if (f) f.classList.remove('keypad-active');
+      if (f) {
+        f.classList.remove('keypad-active');
+        if (f !== field) f.style.backgroundColor = '#fff';
+      }
     });
     activeField = field;
-    if (activeField) activeField.classList.add('keypad-active');
+    if (activeField) {
+      activeField.classList.remove('range-save-complete');
+      activeField.style.backgroundColor = '#fff8d6';
+      activeField.classList.add('keypad-active');
+    }
     keypad.classList.add('show');
     keypad.setAttribute('aria-hidden', 'false');
     document.body.classList.add('range-keypad-open');
@@ -1350,10 +1382,15 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function closeKeypad() {
+    const closingField = activeField;
     fieldIds.forEach(function (id) {
       const f = document.getElementById(id);
       if (f) f.classList.remove('keypad-active');
     });
+    if (closingField) {
+      closingField.classList.remove('range-save-complete');
+      closingField.style.backgroundColor = '#fff';
+    }
     activeField = null;
     keypad.classList.remove('show');
     keypad.setAttribute('aria-hidden', 'true');
@@ -1416,6 +1453,9 @@ document.addEventListener('DOMContentLoaded', function () {
       if (value !== '') {
         notifyFieldChanged(activeField);
       }
+      activeField.classList.remove('keypad-active');
+      activeField.classList.remove('range-save-complete');
+      activeField.style.backgroundColor = '#fff';
       closeKeypad();
       return;
     } else if (/^\d$/.test(key)) {
