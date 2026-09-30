@@ -893,15 +893,11 @@ body.range-keypad-open {
     return { error: { message: lastErrorMessage } };
   }
 
-  async function fetchGoogleTtsBase64(text) {
-    if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) return "";
-
-    // Gemini 응답의 대상 표시와 후리가나는 TTS에 전달하지 않습니다.
+  function getGoogleTtsText(text) {
     let cleanText = String(text || "")
       .replace(/\[\[|\]\]/g, "")
       .replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, "$1")
       .replace(/<[^>]*>/g, "")
-      // 앞 단계에서 처리되지 않고 남은 대괄호도 TTS 요청 직전에 제거
       .replace(/[\[\]]/g, "")
       .trim();
 
@@ -911,6 +907,13 @@ body.range-keypad-open {
         cleanText = cleanText.replace(new RegExp(escapedWord, 'g'), dynamicDictionary[word]);
       }
     }
+
+    return cleanText.replace(/[\[\]]/g, '').trim();
+  }
+
+  async function fetchGoogleTtsBase64(text) {
+    if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) return "";
+    const cleanText = getGoogleTtsText(text);
 
     try {
       const res = await fetch(
@@ -922,6 +925,27 @@ body.range-keypad-open {
       console.error("구글 TTS 불러오기 실패:", e);
       return "";
     }
+  }
+
+  function showTtsSourceDebug(index) {
+    const sourceText = String(exampleJapaneseTexts[index] || '');
+    const googleText = getGoogleTtsText(sourceText);
+    const voxText = sourceText;
+
+    function makeInfo(label, raw) {
+      const chars = [...raw].map((c, i) => {
+        const cp = c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+        const visible = c === ' ' ? '[공백]' : c === '\n' ? '[줄바꿈]' : c === '\r' ? '[CR]' : c === '\t' ? '[탭]' : c;
+        return `${i + 1}. ${visible}  U+${cp}`;
+      }).join('\n');
+      return `【${label}】\n${raw || '(없음)'}\n\n문자 수: ${[...raw].length}\n[ : ${(raw.match(/\[/g) || []).length}개 / ] : ${(raw.match(/\]/g) || []).length}개\n\n【문자별 코드】\n${chars || '(없음)'}`;
+    }
+
+    alert(
+      `TTS 원문 확인 (문장 ${index + 1})\n\n` +
+      makeInfo('Google TTS 실제 전송 원문', googleText) + '\n\n' +
+      makeInfo('VOX 실제 전송 원문', voxText)
+    );
   }
 
   /* 일본어 원문과 후리가나를 맞춰 HTML로 변환합니다.
@@ -1203,7 +1227,7 @@ body.range-keypad-open {
     const buttons = `<div class="voice-buttons">
       <button class="play-btn vox-btn" id="vox-btn-${index}" onclick="handleVoiceButton(${index}, 'vox')">🎙️ 요청</button>
       <button class="play-btn google-btn" id="google-btn-${index}" onclick="handleVoiceButton(${index}, 'google')">🎙️ 요청</button>
-      <button class="play-btn" type="button" onclick="showTtsSourceDebug(${index}, exampleJapaneseTexts[${index}] || '')">TTS 원문 확인</button>
+      <button class="play-btn" type="button" onclick="showTtsSourceDebug(${index}, exampleJapaneseTexts[${index}] || '')">TTS원문확인</button>
     </div>`;
     if (isIOS) {
       return `<div class="action-column"><div id="ios-furi-${index}" class="ios-furigana-display"></div>${buttons}</div>`;
@@ -1378,8 +1402,6 @@ body.range-keypad-open {
 
     const text = exampleJapaneseTexts[index] || '';
     if (!text.trim()) return;
-
-    showTtsSourceDebug(index, text);
 
     setVoiceButtonState(index, 'google', 'loading');
 
