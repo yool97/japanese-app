@@ -943,8 +943,10 @@ body.range-keypad-open {
 
     alert(
       `TTS 원문 확인 (문장 ${index + 1})\n\n` +
-      makeInfo('Google TTS 실제 전송 원문', googleText) + '\n\n' +
-      makeInfo('VOX 실제 전송 원문', voxText)
+      makeInfo('화면/공통 원문 (exampleJapaneseTexts)', sourceText) + '\n\n' +
+      makeInfo('Google TTS 최종 전송 원문 (이 HTML에서 정제 후)', googleText) + '\n\n' +
+      makeInfo('VOX 요청 원문 (이 HTML에서 GAS로 보내는 값)', voxText) + '\n\n' +
+      '※ VOX 서버(GAS)가 받은 뒤 추가 정제한다면 그 최종값은 이 HTML에서는 확인할 수 없습니다.'
     );
   }
 
@@ -1227,7 +1229,7 @@ body.range-keypad-open {
     const buttons = `<div class="voice-buttons">
       <button class="play-btn vox-btn" id="vox-btn-${index}" onclick="handleVoiceButton(${index}, 'vox')">🎙️ 요청</button>
       <button class="play-btn google-btn" id="google-btn-${index}" onclick="handleVoiceButton(${index}, 'google')">🎙️ 요청</button>
-      <button class="play-btn" type="button" onclick="showTtsSourceDebug(${index}, exampleJapaneseTexts[${index}] || '')">TTS원문확인</button>
+      <button class="play-btn" type="button" onclick="showTtsSourceDebug(${index})">TTS 원문 확인</button>
     </div>`;
     if (isIOS) {
       return `<div class="action-column"><div id="ios-furi-${index}" class="ios-furigana-display"></div>${buttons}</div>`;
@@ -1367,27 +1369,6 @@ body.range-keypad-open {
     } else {
       await requestVoicevox(index);
     }
-  }
-
-  function showTtsSourceDebug(index, text) {
-    const raw = String(text || '');
-    const chars = [...raw].map((c, i) => {
-      const cp = c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
-      const visible = c === ' ' ? '[공백]' : c === '\n' ? '[줄바꿈]' : c === '\r' ? '[CR]' : c === '\t' ? '[탭]' : c;
-      return `${i + 1}. ${visible}  U+${cp}`;
-    }).join('\n');
-    const special = [...raw].filter(c => /[^\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\u3000-\u303F\uFF01-\uFF60\s。、，．！？「」『』]/u.test(c));
-    const bracketInfo = {
-      '[': (raw.match(/\[/g) || []).length,
-      ']': (raw.match(/\]/g) || []).length
-    };
-    alert(
-      `TTS 원문 확인 (문장 ${index + 1})\n\n` +
-      `【실제 원문】\n${raw}\n\n` +
-      `【대괄호】 [ : ${bracketInfo['[']}개 / ] : ${bracketInfo[']']}개\n` +
-      `【의심 특수문자】 ${special.length ? [...new Set(special)].join(' ') : '없음'}\n\n` +
-      `【문자별 코드】\n${chars}`
-    );
   }
 
   async function requestGoogleAudio(index) {
