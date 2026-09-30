@@ -381,7 +381,7 @@
 #rangeKeypad .range-keypad-display-row {
   display: flex;
   gap: 7px;
-  height: 42px;
+  height: 52px;
   margin-bottom: 8px;
 }
 #rangeKeypad .range-keypad-display {
@@ -399,10 +399,11 @@
   box-sizing: border-box;
   overflow: hidden;
 }
+#rangeKeypad .key-delete-top,
 #rangeKeypad .key-clear-all,
 #rangeKeypad .key-nav {
-  width: 82px;
-  height: 42px;
+  width: 74px;
+  height: 52px;
   border: 1px solid #bbb;
   border-radius: 9px;
   background: #fff;
@@ -1505,6 +1506,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const keypad = document.getElementById('rangeKeypad');
   const display = document.getElementById('rangeKeypadDisplay');
   let activeField = null;
+  let originalFieldValue = '';
 
   function getFieldValue() {
     return activeField ? String(activeField.value || '') : '';
@@ -1532,6 +1534,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
     activeField = field;
+    originalFieldValue = activeField ? String(activeField.value || '') : '';
     if (activeField) {
       activeField.classList.remove('range-save-complete');
       activeField.style.backgroundColor = '#fff8d6';
@@ -1555,6 +1558,7 @@ document.addEventListener('DOMContentLoaded', function () {
       closingField.style.backgroundColor = '#fff';
     }
     activeField = null;
+    originalFieldValue = '';
     keypad.classList.remove('show');
     keypad.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('range-keypad-open');
@@ -1608,8 +1612,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let value = String(activeField.value || '');
 
-    if (key === 'delete') {
+    if (key === 'delete' || key === 'deleteTop') {
       value = value.slice(0, -1);
+    } else if (key === 'restore') {
+      value = originalFieldValue;
     } else if (key === 'clear') {
       value = '';
     } else if (key === 'confirm') {
@@ -1661,6 +1667,7 @@ document.addEventListener('DOMContentLoaded', function () {
   <div class="range-keypad-inner">
     <div class="range-keypad-display-row">
       <div id="rangeKeypadDisplay" class="range-keypad-display">0</div>
+      <button type="button" class="key-delete-top" data-key="deleteTop">한칸지우기</button>
       <button type="button" class="key-clear-all" data-key="clear">전체삭제</button>
       <button type="button" class="key-nav" data-key="prev">이전</button>
       <button type="button" class="key-nav" data-key="next">다음</button>
@@ -1675,7 +1682,7 @@ document.addEventListener('DOMContentLoaded', function () {
       <button type="button" data-key="7">7</button>
       <button type="button" data-key="8">8</button>
       <button type="button" data-key="9">9</button>
-      <button type="button" class="key-delete" data-key="delete">←</button>
+      <button type="button" class="key-delete" data-key="restore">복원</button>
       <button type="button" data-key="0">0</button>
       <button type="button" class="key-confirm" data-key="confirm">✓</button>
     </div>
