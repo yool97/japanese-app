@@ -243,7 +243,7 @@
       display: none;
     }
     .furigana-text.visible {
-      display: block;
+      display: inline !important;
     }
     .word-badge {
       font-size: 13px;
@@ -1154,20 +1154,33 @@ body.range-keypad-open {
   }
 
   function formatFuriganaText(furiganaText) {
-    // 「後」ボタンでは文章全体を表示하지 않고,
-    // 후리가나가 붙은 한자 부분만 「漢字(ふりがな)」 형태로 표시합니다.
-    let text = String(furiganaText || '')
+    // "후" 버튼에서는 문장 전체가 아니라 후리가나가 붙은 한자 부분만
+    // 漢字(ふりがな) 漢字(ふりがな) 형식으로 표시합니다.
+    const text = String(furiganaText || '')
       .replace(/<\/?u>/gi, '')
-      .replace(/<\/?b>/gi, '');
+      .replace(/<\/?b>/gi, '')
+      .replace(/[\[\]]/g, m => m);
 
     const tokens = [];
-    const tokenRegex = /\[([^\]\n]+)\]\(([^)\n]+)\)|([一-龠々〆ヶ]+)\[([^\]\n]+)\]/g;
+    const seen = new Set();
+
+    // GAS 출력 형식: [漢字](ふりがな) 또는 漢字[ふりがな]
+    const bracketRegex = /\[([^\]\n]+)\]\(([^)\n]+)\)|([一-龠々〆ヶ]+)\[([^\]\n]+)\]/g;
     let match;
-    while ((match = tokenRegex.exec(text)) !== null) {
+    while ((match = bracketRegex.exec(text)) !== null) {
       const kanji = match[1] !== undefined ? match[1] : match[3];
       const reading = match[2] !== undefined ? match[2] : match[4];
-      if (kanji && reading) tokens.push(`${kanji}(${reading})`);
+      const token = kanji && reading ? `${kanji}(${reading})` : '';
+      if (token && !seen.has(token)) { tokens.push(token); seen.add(token); }
     }
+
+    // 괄호형 출력이 들어오는 경우도 지원: 漢字(ふりがな)
+    const plainRegex = /([一-龠々〆ヶ]+)\(([^)\n]+)\)/g;
+    while ((match = plainRegex.exec(text)) !== null) {
+      const token = `${match[1]}(${match[2]})`;
+      if (!seen.has(token)) { tokens.push(token); seen.add(token); }
+    }
+
     return tokens.join(' ');
   }
 
@@ -1199,7 +1212,7 @@ body.range-keypad-open {
               </div>
               ${(item.korean || item.furigana) ? `<div class="korean-container">
                 <button class="toggle-btn" onclick="toggleFurigana(this,'furi-${index}')">후</button>
-                <span id="furi-${index}" class="korean-text hidden-content">${window.escapeHtml(formatFuriganaText(item.furigana))}</span>
+                <span id="furi-${index}" class="korean-text furigana-text">${window.escapeHtml(formatFuriganaText(item.furigana))}</span>
                 <button class="toggle-btn" onclick="toggleKorean(this,'kor-${index}')">해</button>
                 <span id="kor-${index}" class="korean-text hidden-content">${window.escapeHtml(item.korean)}</span>
               </div>
@@ -1236,7 +1249,7 @@ body.range-keypad-open {
           <span id="sentence-${index}" class="sentence-body" style="display:none;">${window.escapeHtml(turn.japanese || '')}</span>
           ${(turn.korean || turn.furigana) ? `<div class="korean-container">
             <button class="toggle-btn" onclick="toggleFurigana(this,'furi-${index}')">후</button>
-            <span id="furi-${index}" class="korean-text hidden-content">${window.escapeHtml(formatFuriganaText(turn.furigana))}</span>
+            <span id="furi-${index}" class="korean-text furigana-text">${window.escapeHtml(formatFuriganaText(turn.furigana))}</span>
             <button class="toggle-btn" onclick="toggleKorean(this,'kor-${index}')">해</button>
             <span id="kor-${index}" class="korean-text hidden-content">${window.escapeHtml(turn.korean)}</span>
           </div>` : ''}
