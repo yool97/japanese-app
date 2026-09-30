@@ -223,8 +223,23 @@
     .korean-container {
       margin-top: 6px;
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    .detail-row {
+      display: flex;
+      align-items: flex-start;
       gap: 6px;
+      width: 100%;
+      min-width: 0;
+    }
+    .detail-row .korean-text {
+      flex: 1;
+      min-width: 0;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .korean-text {
       font-size: 13px;
@@ -1133,15 +1148,15 @@ body.range-keypad-open {
         for (let i=0; i+7<lines.length; i+=8) {
           const aJ=lines[i], aF=lines[i+1], aK=lines[i+2], bJ=lines[i+4], bF=lines[i+5], bK=lines[i+6];
           examples.push({dialogue:true, turns:[
-            {japanese:aJ.replace(/[\[\]]/g,''), japaneseWithMarker:aJ, furigana:aF, rubyHtml:convertToInteractiveRuby(aJ,aF,examples.length*2), korean:aK},
-            {japanese:bJ.replace(/[\[\]]/g,''), japaneseWithMarker:bJ, furigana:bF, rubyHtml:convertToInteractiveRuby(bJ,bF,examples.length*2+1), korean:bK}
+            {japanese:cleanJapaneseDisplay(aJ), japaneseWithMarker:aJ, furigana:aF, rubyHtml:convertToInteractiveRuby(aJ,aF,examples.length*2), korean:aK},
+            {japanese:cleanJapaneseDisplay(bJ), japaneseWithMarker:bJ, furigana:bF, rubyHtml:convertToInteractiveRuby(bJ,bF,examples.length*2+1), korean:bK}
           ]});
         }
       } else {
         for (let i=0; i+3<lines.length; i+=4) {
           const japaneseWithMarker=lines[i], markerMatch=japaneseWithMarker.match(/\[\[([\s\S]*?)\]\]/);
           if (!markerMatch) continue;
-          examples.push({japanese:japaneseWithMarker.replace(/[\[\]]/g,''), japaneseWithMarker, furigana:lines[i+1], rubyHtml:convertToInteractiveRuby(japaneseWithMarker,lines[i+1],i/4), korean:lines[i+2]||'', targetWord:markerMatch[1]});
+          examples.push({japanese:cleanJapaneseDisplay(japaneseWithMarker), japaneseWithMarker, furigana:lines[i+1], rubyHtml:convertToInteractiveRuby(japaneseWithMarker,lines[i+1],i/4), korean:lines[i+2]||'', targetWord:markerMatch[1]});
         }
       }
       if (!examples.length) throw new Error('생성된 내용을 화면 형식으로 변환하지 못했습니다.');
@@ -1151,6 +1166,20 @@ body.range-keypad-open {
       renderExamples(examples, mode);
     } catch (e) { console.error('예문 처리 오류:',e); alert(`처리 오류: ${e.message || e.toString()}`); }
     finally { buttons.forEach(btn => { if (btn) btn.disabled = false; }); }
+  }
+
+  // 일본어 문장 표시용 공통 정리 함수.
+  // 후리가나 표기가 일본어 원문에 섞여 들어온 경우에도
+  // 화면의 '문장'에는 일본어 원문만 표시하고, 후리가나는 별도의 '후' 버튼에서 표시합니다.
+  function cleanJapaneseDisplay(text) {
+    return String(text || '')
+      .replace(/<\/?u>/gi, '')
+      .replace(/<\/?b>/gi, '')
+      .replace(/\[\[|\]\]/g, '')
+      .replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, '$1')
+      .replace(/([一-龠々〆ヶ]+)\[([^\]\n]+)\]/g, '$1')
+      .replace(/([一-龠々〆ヶ]+)\(([^)\n]+)\)/g, '$1')
+      .trim();
   }
 
   function formatFuriganaText(furiganaText) {
@@ -1184,6 +1213,36 @@ body.range-keypad-open {
     return tokens.join(' ');
   }
 
+  // 일반 예문/대화문에서 공통으로 사용하는 3줄 표시 구조
+  // 1줄: 일본어 문장
+  // 2줄: 후리가나 (후 버튼으로 표시/숨김)
+  // 3줄: 해석 (해 버튼으로 표시/숨김)
+  function renderSentenceDetails(japanese, furigana, korean, index, label) {
+    const cleanJapanese = cleanJapaneseDisplay(japanese || '');
+    const furiText = formatFuriganaText(furigana || japanese || '');
+    const sentenceId = `sentence-${index}`;
+    const furiId = `furi-${index}`;
+    const korId = `kor-${index}`;
+
+    return `
+      <div class="text-content">
+        <div class="japanese">
+          <span class="number-btn" onclick="toggleSentence('${sentenceId}')">${label}.</span>
+          <span id="${sentenceId}" class="sentence-body" style="display:none;">${window.escapeHtml(cleanJapanese)}</span>
+        </div>
+        <div class="korean-container">
+          <div class="detail-row">
+            <button class="toggle-btn" onclick="toggleFurigana(this,'${furiId}')">후</button>
+            <span id="${furiId}" class="korean-text furigana-text">${window.escapeHtml(furiText)}</span>
+          </div>
+          <div class="detail-row">
+            <button class="toggle-btn" onclick="toggleKorean(this,'${korId}')">해</button>
+            <span id="${korId}" class="korean-text hidden-content">${window.escapeHtml(korean || '')}</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
   function renderExamples(examples, mode) {
     const container = document.getElementById('examplesContainer');
     container.dataset.generatedMode = mode || '';
@@ -1198,43 +1257,34 @@ body.range-keypad-open {
       container.innerHTML = examples.map((item, index) => `
         <div class="card">
           <div class="dialogue-title">${index + 1}. 대화</div>
-          ${item.turns.map((turn, t) => renderDialogueTurn(turn, index*2+t)).join('')}
+          ${item.turns.map((turn, t) => renderDialogueTurn(turn, index * 2 + t)).join('')}
         </div>
       `).join('');
     } else {
       container.innerHTML = examples.map((item, index) => `
         <div class="card">
           <div class="sentence-row">
-            <div class="text-content">
-              <div class="japanese">
-                <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index + 1}.</span>
-                <span id="sentence-${index}" class="sentence-body" style="display:none;">${window.escapeHtml(item.japanese || '')}</span>
-              </div>
-              ${(item.korean || item.furigana) ? `<div class="korean-container">
-                <button class="toggle-btn" onclick="toggleFurigana(this,'furi-${index}')">후</button>
-                <span id="furi-${index}" class="korean-text furigana-text">${window.escapeHtml(formatFuriganaText(item.furigana))}</span>
-                <button class="toggle-btn" onclick="toggleKorean(this,'kor-${index}')">해</button>
-                <span id="kor-${index}" class="korean-text hidden-content">${window.escapeHtml(item.korean)}</span>
-              </div>
-              ` : ''}
-            </div>
+            ${renderSentenceDetails(item.japanese, item.furigana, item.korean, index, index + 1)}
             ${renderVoiceButtons(index)}
           </div>
         </div>
       `).join('');
-      examples.forEach((item,index)=>{
-        exampleJapaneseTexts[index]=item.japanese||'';
-        audioList[index]=null;
-        voicevoxAudioList[index]=null;
-        exampleSpeakers[index]=null;
+
+      examples.forEach((item, index) => {
+        exampleJapaneseTexts[index] = cleanJapaneseDisplay(item.japanese || '');
+        audioList[index] = null;
+        voicevoxAudioList[index] = null;
+        exampleSpeakers[index] = null;
       });
     }
 
     if (mode === 'dialogue') {
-      examples.forEach((item)=>item.turns.forEach((turn, t)=>{
-        const idx = examples.indexOf(item)*2+t;
-        exampleJapaneseTexts[idx]=turn.japanese||'';
-        audioList[idx]=null; voicevoxAudioList[idx]=null; exampleSpeakers[idx]=null;
+      examples.forEach((item) => item.turns.forEach((turn, t) => {
+        const idx = examples.indexOf(item) * 2 + t;
+        exampleJapaneseTexts[idx] = cleanJapaneseDisplay(turn.japanese || '');
+        audioList[idx] = null;
+        voicevoxAudioList[idx] = null;
+        exampleSpeakers[idx] = null;
       }));
     }
 
@@ -1244,25 +1294,19 @@ body.range-keypad-open {
   function renderDialogueTurn(turn, index) {
     return `
       <div class="dialogue-turn">
-        <div class="dialogue-text">
-          <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index % 2 === 0 ? 'A' : 'B'}.</span>
-          <span id="sentence-${index}" class="sentence-body" style="display:none;">${window.escapeHtml(turn.japanese || '')}</span>
-          ${(turn.korean || turn.furigana) ? `<div class="korean-container">
-            <button class="toggle-btn" onclick="toggleFurigana(this,'furi-${index}')">후</button>
-            <span id="furi-${index}" class="korean-text furigana-text">${window.escapeHtml(formatFuriganaText(turn.furigana))}</span>
-            <button class="toggle-btn" onclick="toggleKorean(this,'kor-${index}')">해</button>
-            <span id="kor-${index}" class="korean-text hidden-content">${window.escapeHtml(turn.korean)}</span>
-          </div>` : ''}
-        </div>
+        ${renderSentenceDetails(turn.japanese, turn.furigana, turn.korean, index, index % 2 === 0 ? 'A' : 'B')}
         ${renderVoiceButtons(index)}
       </div>`;
   }
 
   function renderVoiceButtons(index) {
     const buttons = `<div class="voice-buttons">
-      <button class="play-btn vox-btn" id="vox-btn-${index}" onclick="handleVoiceButton(${index}, 'vox')">요청</button>
-      <button class="play-btn google-btn" id="google-btn-${index}" onclick="handleVoiceButton(${index}, 'google')">요청</button>
+      <button class="play-btn vox-btn" id="vox-btn-${index}" onclick="handleVoiceButton(${index}, 'vox')">🎙️ 요청</button>
+      <button class="play-btn google-btn" id="google-btn-${index}" onclick="handleVoiceButton(${index}, 'google')">🎙️ 요청</button>
     </div>`;
+    if (isIOS) {
+      return `<div class="action-column"><div id="ios-furi-${index}" class="ios-furigana-display"></div>${buttons}</div>`;
+    }
     return buttons;
   }
 
@@ -1371,16 +1415,16 @@ body.range-keypad-open {
 
     if (state === 'loading') {
       btn.disabled = true;
-      btn.textContent = '...';
+      btn.textContent = '⏳ 로딩';
     } else if (state === 'request') {
-      btn.textContent = '요청';
+      btn.textContent = '🎙️ 요청';
     } else if (state === 'play') {
-      btn.textContent = '재생';
+      btn.textContent = '▶️ 재생';
     } else if (state === 'stop') {
-      btn.textContent = '정지';
+      btn.textContent = '⏸️ 정지';
       btn.classList.add('playing');
     } else if (state === 'failed') {
-      btn.textContent = '실패';
+      btn.textContent = '🔃 실패';
       btn.classList.add('failed');
     }
   }
