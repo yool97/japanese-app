@@ -1154,12 +1154,21 @@ body.range-keypad-open {
   }
 
   function formatFuriganaText(furiganaText) {
+    // 「後」ボタンでは文章全体を表示하지 않고,
+    // 후리가나가 붙은 한자 부분만 「漢字(ふりがな)」 형태로 표시합니다.
     let text = String(furiganaText || '')
       .replace(/<\/?u>/gi, '')
       .replace(/<\/?b>/gi, '');
-    text = text.replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, '$1($2)');
-    text = text.replace(/([一-龠々〆ヶ]+)\[([^\]\n]+)\]/g, '$1($2)');
-    return text.replace(/\[\[|\]\]/g, '').replace(/[\[\]]/g, '').trim();
+
+    const tokens = [];
+    const tokenRegex = /\[([^\]\n]+)\]\(([^)\n]+)\)|([一-龠々〆ヶ]+)\[([^\]\n]+)\]/g;
+    let match;
+    while ((match = tokenRegex.exec(text)) !== null) {
+      const kanji = match[1] !== undefined ? match[1] : match[3];
+      const reading = match[2] !== undefined ? match[2] : match[4];
+      if (kanji && reading) tokens.push(`${kanji}(${reading})`);
+    }
+    return tokens.join(' ');
   }
 
   function renderExamples(examples, mode) {
@@ -1189,11 +1198,12 @@ body.range-keypad-open {
                 <span id="sentence-${index}" class="sentence-body" style="display:none;">${window.escapeHtml(item.japanese || '')}</span>
               </div>
               ${(item.korean || item.furigana) ? `<div class="korean-container">
+                <button class="toggle-btn" onclick="toggleFurigana(this,'furi-${index}')">후</button>
+                <span id="furi-${index}" class="korean-text hidden-content">${window.escapeHtml(formatFuriganaText(item.furigana))}</span>
                 <button class="toggle-btn" onclick="toggleKorean(this,'kor-${index}')">해</button>
                 <span id="kor-${index}" class="korean-text hidden-content">${window.escapeHtml(item.korean)}</span>
-                <button class="toggle-btn" onclick="toggleFurigana(this,'furi-${index}')">후</button>
               </div>
-              <div class="furigana-row"><span id="furi-${index}" class="furigana-text">${window.escapeHtml(formatFuriganaText(item.furigana))}</span></div>` : ''}
+              ` : ''}
             </div>
             ${renderVoiceButtons(index)}
           </div>
@@ -1225,11 +1235,11 @@ body.range-keypad-open {
           <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index % 2 === 0 ? 'A' : 'B'}.</span>
           <span id="sentence-${index}" class="sentence-body" style="display:none;">${window.escapeHtml(turn.japanese || '')}</span>
           ${(turn.korean || turn.furigana) ? `<div class="korean-container">
+            <button class="toggle-btn" onclick="toggleFurigana(this,'furi-${index}')">후</button>
+            <span id="furi-${index}" class="korean-text hidden-content">${window.escapeHtml(formatFuriganaText(turn.furigana))}</span>
             <button class="toggle-btn" onclick="toggleKorean(this,'kor-${index}')">해</button>
             <span id="kor-${index}" class="korean-text hidden-content">${window.escapeHtml(turn.korean)}</span>
-            <button class="toggle-btn" onclick="toggleFurigana(this,'furi-${index}')">후</button>
-          </div>
-          <div class="furigana-row"><span id="furi-${index}" class="furigana-text">${window.escapeHtml(formatFuriganaText(turn.furigana))}</span></div>` : ''}
+          </div>` : ''}
         </div>
         ${renderVoiceButtons(index)}
       </div>`;
