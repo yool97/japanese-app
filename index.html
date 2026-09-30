@@ -143,7 +143,9 @@
       line-height: 1.6;
       margin-top: 2px;
       margin-bottom: 4px;
-      white-space: nowrap;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
       -webkit-text-size-adjust: 100% !important;
       text-size-adjust: 100% !important;
     }
@@ -152,6 +154,25 @@
     .japanese * {
       -webkit-text-size-adjust: 100% !important;
       text-size-adjust: 100% !important;
+    }
+    
+    /* 스프레드시트와 동일한 3단계 블라인드 표시
+       1단계: 문장 전체 숨김
+       2단계: 대상 부분을 (     )로 표시
+       3단계: 대상 부분까지 표시 */
+    .sentence-body.blind-mode .blind-target .blind-original {
+      display: none !important;
+    }
+    .sentence-body.blind-mode .blind-target::after {
+      content: "(     )";
+      color: inherit;
+      white-space: pre;
+    }
+    .sentence-body.revealed-mode .blind-target .blind-original {
+      display: inline !important;
+    }
+    .sentence-body.revealed-mode .blind-target::after {
+      content: none;
     }
 
     .number-btn {
@@ -170,41 +191,34 @@
     }
 
     /*첫 번째 코드의 absolute 후리가나 스타일*/
-    .furigana-box {
-      margin-top: 5px;
-      padding: 5px 8px;
-      border: 1px solid #dadce0;
-      border-radius: 4px;
-      background: #fafafa;
-      font-size: 13px;
-      line-height: 1.8;
-    }
-    .furigana-btn {
-      border: 1px solid #dadce0;
-      background: #f1f3f4;
-      color: #3c4043;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 11px;
+    ruby.interactive-ruby {
       cursor: pointer;
-    }
-    .furigana-line {
-      margin-top: 4px;
-      min-height: 22px;
-      white-space: normal;
-    }
-    .furigana-token {
+      position: relative;
       display: inline-block;
-      margin-right: 8px;
+      vertical-align: baseline;
+    }
+
+    rb {
+      letter-spacing: normal;
+      display: inline-block;
+    }
+    
+    rt.ruby-text {
+      position: absolute;
+      top: -0.85em;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: #1a73e8;
+      font-weight: normal;
       white-space: nowrap;
+      line-height: 1;
+      pointer-events: none;
     }
-    .furigana-kanji {
-      cursor: pointer;
-      font-weight: 500;
+    
+    rt.hidden-rt {
+      display: none;
     }
-    .furigana-reading { color: transparent; }
-    .furigana-line.visible .furigana-reading { color: #fff; }
-    .furigana-line.visible .furigana-reading.revealed { color: #000; }
 
     .korean-container {
       margin-top: 6px;
@@ -215,6 +229,21 @@
     .korean-text {
       font-size: 13px;
       color: #3c4043;
+    }
+    .furigana-row {
+      margin-top: 4px;
+      font-size: 13px;
+      color: #3c4043;
+      line-height: 1.5;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .furigana-text {
+      display: none;
+    }
+    .furigana-text.visible {
+      display: block;
     }
     .word-badge {
       font-size: 13px;
@@ -279,6 +308,20 @@
       align-items: flex-end;
       gap: 4px;
       flex-shrink: 0;
+      -webkit-text-size-adjust: 100% !important;
+      text-size-adjust: 100% !important;
+    }
+    .ios-furigana-display {
+      font-size: 12px;
+      font-weight: bold;
+      color: #1a73e8;
+      background-color: #e8f0fe;
+      padding: 0px 8px;         /* 원래 2px 8px */
+      border-radius: 4px;
+      min-height: 22px;        /* 원래 20px */
+      line-height: 22px;       /* 원래 20px */
+      visibility: hidden;
+      white-space: nowrap;
       -webkit-text-size-adjust: 100% !important;
       text-size-adjust: 100% !important;
     }
@@ -488,7 +531,7 @@ body.range-keypad-open {
   // iOS 기기 여부 감지
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwg_tmELpf-nB_yGcPkAs5rGpSciYabNlKATOO4_RiUEQKVxvXkLBNE97_z9VeegRZk1Q/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyiw9_h5V1vlIKyVIUxKJ02bHh4q16GEm8sMv5szaNaqOlsauP15UfGz5cPnzcRSNhg2g/exec';
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
@@ -585,6 +628,7 @@ body.range-keypad-open {
     ).map(el => ({
       id: el.id,
       display: el.style.display || '',
+      blindState: el.dataset.blindState || '0',
       className: el.className
     }));
 
@@ -608,9 +652,20 @@ body.range-keypad-open {
   function extractJapaneseTextsFromDisplayedState() {
     const container = document.getElementById('examplesContainer');
     if (!container) return [];
-    return Array.from(container.querySelectorAll('.sentence-body'))
-      .map(el => el.dataset.sentenceText || '')
-      .filter(Boolean);
+
+    const getCleanJapanese = (selector) => {
+      const nodes = Array.from(container.querySelectorAll(selector));
+      return nodes.map(node => {
+        const clone = node.cloneNode(true);
+        clone.querySelectorAll('rt, .number-btn').forEach(el => el.remove());
+        return clone.textContent.replace(/\s+/g, ' ').trim();
+      }).filter(Boolean);
+    };
+
+    const sentences = getCleanJapanese('.sentence-body');
+    if (sentences.length) return sentences;
+
+    return getCleanJapanese('.dialogue-text');
   }
 
   function restoreDisplayedSentenceState() {
@@ -627,6 +682,7 @@ body.range-keypad-open {
       const el = document.getElementById(item.id);
       if (!el) return;
       el.style.display = item.display || '';
+      el.dataset.blindState = item.blindState || '0';
       el.className = item.className || el.className;
     });
 
@@ -885,7 +941,10 @@ body.range-keypad-open {
     }
   }
 
-  /* 최종 일본어 문장은 화면과 음성의 공통 원본입니다. 후리가나는 별도 표시 데이터입니다. */
+  /* 일본어 원문과 후리가나를 맞춰 HTML로 변환합니다.
+     [[...]]의 위치는 일본어 원문을 기준으로 잡고,
+     후리가나 줄에는 [[...]]가 없다는 현재 GAS 규칙에 맞춰 같은 위치를
+     후리가나 HTML 안에 정확히 적용합니다. */
   // 전역 HTML 이스케이프 함수: 결과 렌더링에서도 사용합니다.
   window.escapeHtml = function(value) {
     return String(value == null ? '' : value)
@@ -896,30 +955,97 @@ body.range-keypad-open {
       .replace(/'/g, "&#39;");
   };
 
-  function convertToInteractiveRuby(japaneseText) {
+  function convertToInteractiveRuby(japaneseText, furiganaText, sentenceIndex) {
     if (!japaneseText) return "";
-    return window.escapeHtml(String(japaneseText)
-      .replace(/\[\[|\]\]/g, "")
-      .replace(/[\[\]]/g, ""));
-  }
 
-  function buildFuriganaHtml(furiganaText, index) {
-    const source = String(furiganaText || "");
+    const cleanJapanese = japaneseText
+      .replace(/<\/?u>/gi, "")
+      .replace(/<\/?b>/gi, "");
+
+    const markerMatch = cleanJapanese.match(/\[\[([\s\S]*?)\]\]/);
+    const targetWord = markerMatch ? markerMatch[1] : "";
+    const baseJapanese = cleanJapanese
+      .replace(/\[\[|\]\]/g, "")
+      // 앞 단계에서 처리되지 않고 남은 대괄호도 화면 표시 직전에 제거
+      .replace(/[\[\]]/g, "");
+    const targetStart = targetWord ? baseJapanese.indexOf(targetWord) : -1;
+    const targetEnd = targetStart >= 0 ? targetStart + targetWord.length : -1;
+
+    const source = (furiganaText || baseJapanese)
+      .replace(/<\/?u>/gi, "")
+      .replace(/<\/?b>/gi, "");
+
+    const onclickAttr = isIOS
+      ? `onclick="toggleRubyIOS(this, ${sentenceIndex})"`
+      : `onclick="toggleRuby(this)"`;
+
+    // 후리가나 표기를 토큰 단위로 읽습니다.
+    // 각 토큰의 baseTextLength를 이용해 원문의 대상 범위와 정확히 맞춥니다.
     const tokenRegex = /\[([^\]\n]+)\]\(([^)\n]+)\)|([一-龠々〆ヶ]+)\[([^\]\n]+)\]/g;
-    const tokens = [];
+    let html = "";
+    let lastIndex = 0;
+    let basePos = 0;
+
+    let blindOpen = false;
+
+    function setBlindState(overlapsTarget) {
+      if (overlapsTarget && !blindOpen) {
+        html += '<span class="blind-target"><span class="blind-original">';
+        blindOpen = true;
+      } else if (!overlapsTarget && blindOpen) {
+        html += '</span></span>';
+        blindOpen = false;
+      }
+    }
+
+    function appendPart(text, partStart, partEnd) {
+      if (!text) return;
+
+      const overlapsTarget =
+        targetStart >= 0 && partStart < targetEnd && partEnd > targetStart;
+
+      setBlindState(overlapsTarget);
+      html += window.escapeHtml(text);
+    }
+
+    function appendRuby(baseText, reading, partStart, partEnd) {
+      const overlapsTarget =
+        targetStart >= 0 && partStart < targetEnd && partEnd > targetStart;
+      setBlindState(overlapsTarget);
+      html += `<ruby class="interactive-ruby" ${onclickAttr}><rb>${window.escapeHtml(baseText)}</rb><rt class="ruby-text hidden-rt">${window.escapeHtml(reading)}</rt></ruby>`;
+    }
+
     let match;
     while ((match = tokenRegex.exec(source)) !== null) {
-      const kanji = match[1] !== undefined ? match[1] : match[3];
+      // 후리가나 표기 앞의 일반 문자
+      const plain = source.slice(lastIndex, match.index);
+      if (plain) {
+        appendPart(plain, basePos, basePos + plain.length);
+        basePos += plain.length;
+      }
+
+      const baseText = match[1] !== undefined ? match[1] : match[3];
       const reading = match[2] !== undefined ? match[2] : match[4];
-      if (kanji && reading) tokens.push({kanji, reading});
+      appendRuby(baseText, reading, basePos, basePos + baseText.length);
+      basePos += baseText.length;
+      lastIndex = tokenRegex.lastIndex;
     }
-    if (!tokens.length) return '';
-    return `<div class="furigana-box" id="furi-box-${index}">
-      <button type="button" class="furigana-btn" onclick="toggleFurigana(${index})">후리가나</button>
-      <div id="furi-line-${index}" class="furigana-line">${tokens.map((t,i)=>
-        `<span class="furigana-token"><span class="furigana-kanji" onclick="toggleFuriganaReading(event, ${index}, ${i})">${window.escapeHtml(t.kanji)}</span><span class="furigana-reading">(${window.escapeHtml(t.reading)})</span></span>`
-      ).join('')}</div>
-    </div>`;
+
+    // 마지막 일반 문자
+    const tail = source.slice(lastIndex);
+    if (tail) appendPart(tail, basePos, basePos + tail.length);
+
+    if (blindOpen) {
+      html += '</span></span>';
+      blindOpen = false;
+    }
+
+    // 후리가나 형식이 전혀 없는 경우에도 원문을 표시합니다.
+    if (!html) {
+      html = window.escapeHtml(baseJapanese);
+    }
+
+    return html;
   }
 
   async function processWords(mode) {
@@ -952,10 +1078,14 @@ body.range-keypad-open {
 6. 일본어 문장에는 일본어 이외의 문자가 섞이지 않게 하세요.
 
 [후리가나 표기 규칙]:
-- 일본어 문장의 한자 부분에는 후리가나를 붙이세요.
-- 후리가나 줄은 [漢字](よみ) 형식으로 작성하세요.
-- 예: 今日は学校へ行きます。 → [今日](きょう)は[学校](がっこう)へ[行](い)きます。
-- 일본어 본문에는 [ ]나 [[ ]] 같은 표시를 넣지 마세요.
+- 일본어 문장의 모든 한자에는 후리가나를 붙이세요.
+- 하나의 단어는 전체를 하나의 []로 묶고 발음 전체를 하나의 ()에 적으세요.
+- 예: 正直 → [正直](しょうじき)
+- 예: 伝えます → [伝](つた)えます
+- 후리가나 줄에는 [[...]]를 넣지 마세요.
+
+[대상 부분 지정 규칙]:
+- 일본어 문장의 대상 부분 전체를 [[...]]로 정확히 한 번 감싸세요.
 `;
 
     if (mode === 'five') {
@@ -1001,25 +1131,35 @@ body.range-keypad-open {
       const examples = [];
       if (mode === 'dialogue') {
         for (let i=0; i+7<lines.length; i+=8) {
-          const aJ=lines[i].replace(/[\[\]]/g,''), aF=lines[i+1], aK=lines[i+3], bJ=lines[i+4].replace(/[\[\]]/g,''), bF=lines[i+5], bK=lines[i+7];
+          const aJ=lines[i], aF=lines[i+1], aK=lines[i+2], bJ=lines[i+4], bF=lines[i+5], bK=lines[i+6];
           examples.push({dialogue:true, turns:[
-            {japanese:aJ, furigana:aF, rubyHtml:convertToInteractiveRuby(aJ), furiHtml:buildFuriganaHtml(aF, examples.length*2), korean:aK},
-            {japanese:bJ, furigana:bF, rubyHtml:convertToInteractiveRuby(bJ), furiHtml:buildFuriganaHtml(bF, examples.length*2+1), korean:bK}
+            {japanese:aJ.replace(/[\[\]]/g,''), japaneseWithMarker:aJ, furigana:aF, rubyHtml:convertToInteractiveRuby(aJ,aF,examples.length*2), korean:aK},
+            {japanese:bJ.replace(/[\[\]]/g,''), japaneseWithMarker:bJ, furigana:bF, rubyHtml:convertToInteractiveRuby(bJ,bF,examples.length*2+1), korean:bK}
           ]});
         }
       } else {
         for (let i=0; i+3<lines.length; i+=4) {
-          const japanese=lines[i].replace(/[\[\]]/g,'');
-          examples.push({japanese, furigana:lines[i+1], rubyHtml:convertToInteractiveRuby(japanese), furiHtml:buildFuriganaHtml(lines[i+1], i/4), korean:lines[i+3]||'' , literalKorean:lines[i+2]||''});
+          const japaneseWithMarker=lines[i], markerMatch=japaneseWithMarker.match(/\[\[([\s\S]*?)\]\]/);
+          if (!markerMatch) continue;
+          examples.push({japanese:japaneseWithMarker.replace(/[\[\]]/g,''), japaneseWithMarker, furigana:lines[i+1], rubyHtml:convertToInteractiveRuby(japaneseWithMarker,lines[i+1],i/4), korean:lines[i+2]||'', targetWord:markerMatch[1]});
         }
       }
       if (!examples.length) throw new Error('생성된 내용을 화면 형식으로 변환하지 못했습니다.');
       for (let i=examples.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [examples[i],examples[j]]=[examples[j],examples[i]]; }
-      if (mode === 'dialogue') examples.forEach((item,index)=>item.turns.forEach((turn,t)=>{ turn.rubyHtml=convertToInteractiveRuby(turn.japanese); turn.furiHtml=buildFuriganaHtml(turn.furigana,index*2+t); }));
-      else examples.forEach((item,index)=>{ item.rubyHtml=convertToInteractiveRuby(item.japanese); item.furiHtml=buildFuriganaHtml(item.furigana,index); });
+      if (mode === 'dialogue') examples.forEach((item,index)=>item.turns.forEach((turn,t)=>turn.rubyHtml=convertToInteractiveRuby(turn.japaneseWithMarker||turn.japanese,turn.furigana||'',index*2+t)));
+      else examples.forEach((item,index)=>item.rubyHtml=convertToInteractiveRuby(item.japaneseWithMarker||item.japanese,item.furigana||'',index));
       renderExamples(examples, mode);
     } catch (e) { console.error('예문 처리 오류:',e); alert(`처리 오류: ${e.message || e.toString()}`); }
     finally { buttons.forEach(btn => { if (btn) btn.disabled = false; }); }
+  }
+
+  function formatFuriganaText(furiganaText) {
+    let text = String(furiganaText || '')
+      .replace(/<\/?u>/gi, '')
+      .replace(/<\/?b>/gi, '');
+    text = text.replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, '$1($2)');
+    text = text.replace(/([一-龠々〆ヶ]+)\[([^\]\n]+)\]/g, '$1($2)');
+    return text.replace(/\[\[|\]\]/g, '').replace(/[\[\]]/g, '').trim();
   }
 
   function renderExamples(examples, mode) {
@@ -1046,10 +1186,14 @@ body.range-keypad-open {
             <div class="text-content">
               <div class="japanese">
                 <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index + 1}.</span>
-                <span id="sentence-${index}" class="sentence-body" data-sentence-text="${window.escapeHtml(item.japanese)}" style="display:none;">${item.rubyHtml}</span>
-                ${item.furiHtml || buildFuriganaHtml(item.furigana,index)}
+                <span id="sentence-${index}" class="sentence-body" style="display:none;">${window.escapeHtml(item.japanese || '')}</span>
               </div>
-              ${item.korean ? `<div class="korean-container"><button class="toggle-btn" onclick="toggleKorean(this,'kor-${index}')">💡 해석</button><span id="kor-${index}" class="korean-text hidden-content">${window.escapeHtml(item.korean)}</span></div>` : ''}
+              ${(item.korean || item.furigana) ? `<div class="korean-container">
+                <button class="toggle-btn" onclick="toggleKorean(this,'kor-${index}')">해</button>
+                <span id="kor-${index}" class="korean-text hidden-content">${window.escapeHtml(item.korean)}</span>
+                <button class="toggle-btn" onclick="toggleFurigana(this,'furi-${index}')">후</button>
+              </div>
+              <div class="furigana-row"><span id="furi-${index}" class="furigana-text">${window.escapeHtml(formatFuriganaText(item.furigana))}</span></div>` : ''}
             </div>
             ${renderVoiceButtons(index)}
           </div>
@@ -1079,9 +1223,13 @@ body.range-keypad-open {
       <div class="dialogue-turn">
         <div class="dialogue-text">
           <span class="number-btn" onclick="toggleSentence('sentence-${index}')">${index % 2 === 0 ? 'A' : 'B'}.</span>
-          <span id="sentence-${index}" class="sentence-body" data-sentence-text="${window.escapeHtml(turn.japanese)}" style="display:none;">${turn.rubyHtml}</span>
-          ${turn.furiHtml || buildFuriganaHtml(turn.furigana,index)}
-          ${turn.korean ? `<div class="korean-container"><button class="toggle-btn" onclick="toggleKorean(this,'kor-${index}')">💡 해석</button><span id="kor-${index}" class="korean-text hidden-content">${window.escapeHtml(turn.korean)}</span></div>` : ''}
+          <span id="sentence-${index}" class="sentence-body" style="display:none;">${window.escapeHtml(turn.japanese || '')}</span>
+          ${(turn.korean || turn.furigana) ? `<div class="korean-container">
+            <button class="toggle-btn" onclick="toggleKorean(this,'kor-${index}')">해</button>
+            <span id="kor-${index}" class="korean-text hidden-content">${window.escapeHtml(turn.korean)}</span>
+            <button class="toggle-btn" onclick="toggleFurigana(this,'furi-${index}')">후</button>
+          </div>
+          <div class="furigana-row"><span id="furi-${index}" class="furigana-text">${window.escapeHtml(formatFuriganaText(turn.furigana))}</span></div>` : ''}
         </div>
         ${renderVoiceButtons(index)}
       </div>`;
@@ -1089,35 +1237,80 @@ body.range-keypad-open {
 
   function renderVoiceButtons(index) {
     const buttons = `<div class="voice-buttons">
-      <button class="play-btn vox-btn" id="vox-btn-${index}" onclick="handleVoiceButton(${index}, 'vox')">🎙️ 요청</button>
-      <button class="play-btn google-btn" id="google-btn-${index}" onclick="handleVoiceButton(${index}, 'google')">🎙️ 요청</button>
+      <button class="play-btn vox-btn" id="vox-btn-${index}" onclick="handleVoiceButton(${index}, 'vox')">요청</button>
+      <button class="play-btn google-btn" id="google-btn-${index}" onclick="handleVoiceButton(${index}, 'google')">요청</button>
     </div>`;
-    if (isIOS) {
-      return `<div class="action-column"><div id="ios-furi-${index}" class="ios-furigana-display"></div>${buttons}</div>`;
-    }
     return buttons;
   }
 
-  // 번호 클릭: 문장만 표시/숨김
+  // 문장 번호 클릭: 1단계 문장 표시 ↔ 2단계 문장 숨김
+  // 대상 단어 블라인드 기능은 모바일에서 사용하지 않습니다.
   function toggleSentence(elementId) {
     const target = document.getElementById(elementId);
     if (!target) return;
-    target.style.display = target.style.display === 'none' ? 'inline' : 'none';
+
+    const isHidden = target.style.display === 'none' || !target.style.display;
+    target.classList.remove('blind-mode', 'revealed-mode');
+
+    if (isHidden) {
+      target.style.display = 'inline';
+      target.dataset.blindState = '1';
+    } else {
+      target.style.display = 'none';
+      target.dataset.blindState = '0';
+    }
+
+    saveDisplayedSentenceState();
   }
 
-  function toggleFurigana(index) {
-    const line = document.getElementById(`furi-line-${index}`);
-    if (!line) return;
-    line.classList.toggle('visible');
+  function toggleFurigana(button, furiId) {
+    const target = document.getElementById(furiId);
+    if (!target) return;
+
+    const visible = target.classList.contains('visible');
+    target.classList.toggle('visible', !visible);
+    button.style.backgroundColor = !visible ? '#e8f0fe' : '';
+    button.style.color = !visible ? '#1a73e8' : '';
+    saveDisplayedSentenceState();
   }
 
-  function toggleFuriganaReading(event, index, tokenIndex) {
-    event.stopPropagation();
-    const line = document.getElementById(`furi-line-${index}`);
-    if (!line || !line.classList.contains('visible')) return;
-    const tokens = line.querySelectorAll('.furigana-token');
-    const reading = tokens[tokenIndex]?.querySelector('.furigana-reading');
-    if (reading) reading.classList.toggle('revealed');
+  // 비 iOS 기기용 클릭 이벤트
+  function toggleRuby(rubyElem) {
+    const targetRt = rubyElem.querySelector('rt');
+    if (!targetRt) return;
+
+    const wasHidden = targetRt.classList.contains('hidden-rt');
+
+    const allRts = document.querySelectorAll('rt.ruby-text');
+    allRts.forEach(rt => rt.classList.add('hidden-rt'));
+
+    if (wasHidden) {
+      targetRt.classList.remove('hidden-rt');
+    }
+  }
+
+  // iOS 기기 전용 클릭 이벤트 (재생 버튼 상단 표시)
+  function toggleRubyIOS(rubyElem, index) {
+    const targetRt = rubyElem.querySelector('rt');
+    const displayBox = document.getElementById(`ios-furi-${index}`);
+    if (!targetRt || !displayBox) return;
+
+    const text = targetRt.textContent.trim();
+
+    // 이미 같은 단어가 표기되어 보이고 있다면 토글 off
+    if (displayBox.style.visibility === 'visible' && displayBox.textContent === text) {
+      displayBox.style.visibility = 'hidden';
+      displayBox.textContent = '';
+    } else {
+      // 모든 iOS 표시 박스 초기화
+      document.querySelectorAll('.ios-furigana-display').forEach(box => {
+        box.style.visibility = 'hidden';
+        box.textContent = '';
+      });
+
+      displayBox.textContent = text;
+      displayBox.style.visibility = 'visible';
+    }
   }
 
   function toggleKorean(button, korId) {
@@ -1125,12 +1318,12 @@ body.range-keypad-open {
 
     if (korTarget.classList.contains('hidden-content')) {
       korTarget.classList.remove('hidden-content');
-      button.textContent = '💡 해석';
+      button.textContent = '해';
       button.style.backgroundColor = '#e8f0fe';
       button.style.color = '#1a73e8';
     } else {
       korTarget.classList.add('hidden-content');
-      button.textContent = '💡 해석';
+      button.textContent = '해';
       button.style.backgroundColor = '';
       button.style.color = '';
     }
@@ -1157,14 +1350,14 @@ body.range-keypad-open {
       btn.disabled = true;
       btn.textContent = '...';
     } else if (state === 'request') {
-      btn.textContent = '🎙️ 요청';
+      btn.textContent = '요청';
     } else if (state === 'play') {
-      btn.textContent = '▶️ 재생';
+      btn.textContent = '재생';
     } else if (state === 'stop') {
-      btn.textContent = '⏸️ 정지';
+      btn.textContent = '정지';
       btn.classList.add('playing');
     } else if (state === 'failed') {
-      btn.textContent = '🔃 실패';
+      btn.textContent = '실패';
       btn.classList.add('failed');
     }
   }
