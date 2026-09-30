@@ -1203,6 +1203,7 @@ body.range-keypad-open {
     const buttons = `<div class="voice-buttons">
       <button class="play-btn vox-btn" id="vox-btn-${index}" onclick="handleVoiceButton(${index}, 'vox')">🎙️ 요청</button>
       <button class="play-btn google-btn" id="google-btn-${index}" onclick="handleVoiceButton(${index}, 'google')">🎙️ 요청</button>
+      <button class="play-btn" type="button" onclick="showTtsSourceDebug(${index}, exampleJapaneseTexts[${index}] || '')">TTS 원문 확인</button>
     </div>`;
     if (isIOS) {
       return `<div class="action-column"><div id="ios-furi-${index}" class="ios-furigana-display"></div>${buttons}</div>`;
@@ -1344,6 +1345,27 @@ body.range-keypad-open {
     }
   }
 
+  function showTtsSourceDebug(index, text) {
+    const raw = String(text || '');
+    const chars = [...raw].map((c, i) => {
+      const cp = c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0');
+      const visible = c === ' ' ? '[공백]' : c === '\n' ? '[줄바꿈]' : c === '\r' ? '[CR]' : c === '\t' ? '[탭]' : c;
+      return `${i + 1}. ${visible}  U+${cp}`;
+    }).join('\n');
+    const special = [...raw].filter(c => /[^\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\u3000-\u303F\uFF01-\uFF60\s。、，．！？「」『』]/u.test(c));
+    const bracketInfo = {
+      '[': (raw.match(/\[/g) || []).length,
+      ']': (raw.match(/\]/g) || []).length
+    };
+    alert(
+      `TTS 원문 확인 (문장 ${index + 1})\n\n` +
+      `【실제 원문】\n${raw}\n\n` +
+      `【대괄호】 [ : ${bracketInfo['[']}개 / ] : ${bracketInfo[']']}개\n` +
+      `【의심 특수문자】 ${special.length ? [...new Set(special)].join(' ') : '없음'}\n\n` +
+      `【문자별 코드】\n${chars}`
+    );
+  }
+
   async function requestGoogleAudio(index) {
     const btn = getVoiceButton(index, 'google');
     if (!btn) return;
@@ -1356,6 +1378,8 @@ body.range-keypad-open {
 
     const text = exampleJapaneseTexts[index] || '';
     if (!text.trim()) return;
+
+    showTtsSourceDebug(index, text);
 
     setVoiceButtonState(index, 'google', 'loading');
 
