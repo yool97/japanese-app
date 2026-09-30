@@ -580,20 +580,108 @@ body.range-keypad-open {
     }
   }
 
-  function saveBrowserState() {
+  function saveBrowserState(extraState = {}) {
     try {
+      const previous = getBrowserState();
       const state = {
+        ...previous,
         vRangeStart: document.getElementById('vRangeStart')?.value || '',
         vRangeEnd: document.getElementById('vRangeEnd')?.value || '',
         wRangeStart: document.getElementById('wRangeStart')?.value || '',
         wRangeEnd: document.getElementById('wRangeEnd')?.value || '',
         inputTextLeft: document.getElementById('inputTextLeft')?.value || '',
-        inputTextRight: document.getElementById('inputTextRight')?.value || ''
+        inputTextRight: document.getElementById('inputTextRight')?.value || '',
+        ...extraState
       };
       window.localStorage.setItem(BROWSER_STATE_KEY, JSON.stringify(state));
     } catch (e) {
       console.warn('브라우저 상태 저장 실패:', e);
     }
+  }
+
+  // 생성된 문장 화면 자체와 현재 표시 상태를 브라우저에 저장합니다.
+  // 음성(Base64), 음성 요청 상태 등 오디오 데이터는 저장하지 않습니다.
+  function saveDisplayedSentenceState(mode) {
+    const container = document.getElementById('examplesContainer');
+    if (!container || !container.innerHTML.trim()) return;
+
+    const sentenceStates = Array.from(
+      container.querySelectorAll('.sentence-body')
+    ).map(el => ({
+      id: el.id,
+      display: el.style.display || '',
+      blindState: el.dataset.blindState || '0',
+      className: el.className
+    }));
+
+    const koreanStates = Array.from(
+      container.querySelectorAll('.korean-text')
+    ).map(el => ({
+      id: el.id,
+      className: el.className
+    }));
+
+    saveBrowserState({
+      displayedSentenceState: {
+        mode: mode || container.dataset.generatedMode || '',
+        html: container.innerHTML,
+        sentenceStates,
+        koreanStates
+      }
+    });
+  }
+
+  function extractJapaneseTextsFromDisplayedState() {
+    const container = document.getElementById('examplesContainer');
+    if (!container) return [];
+
+    const getCleanJapanese = (selector) => {
+      const nodes = Array.from(container.querySelectorAll(selector));
+      return nodes.map(node => {
+        const clone = node.cloneNode(true);
+        clone.querySelectorAll('rt, .number-btn').forEach(el => el.remove());
+        return clone.textContent.replace(/\s+/g, ' ').trim();
+      }).filter(Boolean);
+    };
+
+    const sentences = getCleanJapanese('.sentence-body');
+    if (sentences.length) return sentences;
+
+    return getCleanJapanese('.dialogue-text');
+  }
+
+  function restoreDisplayedSentenceState() {
+    const saved = getBrowserState().displayedSentenceState;
+    if (!saved || !saved.html) return;
+
+    const container = document.getElementById('examplesContainer');
+    if (!container) return;
+
+    container.innerHTML = saved.html;
+    container.dataset.generatedMode = saved.mode || '';
+
+    (saved.sentenceStates || []).forEach(item => {
+      const el = document.getElementById(item.id);
+      if (!el) return;
+      el.style.display = item.display || '';
+      el.dataset.blindState = item.blindState || '0';
+      el.className = item.className || el.className;
+    });
+
+    (saved.koreanStates || []).forEach(item => {
+      const el = document.getElementById(item.id);
+      if (!el) return;
+      el.className = item.className || el.className;
+    });
+
+    // 음성 데이터는 복원하지 않습니다. 문장 텍스트만 다시 준비해
+    // 복원된 화면에서도 기존 음성 요청 버튼을 사용할 수 있게 합니다.
+    audioList = [];
+    voicevoxAudioList = [];
+    exampleJapaneseTexts = extractJapaneseTextsFromDisplayedState();
+    exampleSpeakers = [];
+    currentIndex = -1;
+    currentVoice = '';
   }
 
   function restoreBrowserState() {
@@ -758,6 +846,7 @@ body.range-keypad-open {
     restoreSavedApiKey();
     restoreBrowserState();
     setupBrowserStateAutoSave();
+    restoreDisplayedSentenceState();
   });
   window.addEventListener('load', restoreSavedApiKey);
 
@@ -1048,6 +1137,7 @@ body.range-keypad-open {
 
   function renderExamples(examples, mode) {
     const container = document.getElementById('examplesContainer');
+    container.dataset.generatedMode = mode || '';
     audioList = [];
     voicevoxAudioList = [];
     exampleJapaneseTexts = [];
@@ -1092,6 +1182,8 @@ body.range-keypad-open {
         audioList[idx]=null; voicevoxAudioList[idx]=null; exampleSpeakers[idx]=null;
       }));
     }
+
+    saveDisplayedSentenceState(mode);
   }
 
   function renderDialogueTurn(turn, index) {
@@ -1142,6 +1234,8 @@ body.range-keypad-open {
       target.style.display = 'none';
       target.dataset.blindState = '0';
     }
+
+    saveDisplayedSentenceState();
   }
 
   // 비 iOS 기기용 클릭 이벤트
@@ -1197,6 +1291,8 @@ body.range-keypad-open {
       button.style.backgroundColor = '';
       button.style.color = '';
     }
+
+    saveDisplayedSentenceState();
   }
 
   function getVoiceButton(index, voice) {
