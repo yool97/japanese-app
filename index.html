@@ -250,6 +250,13 @@
     .hidden-content {
       display: none !important;
     }
+    .furigana-link {
+      color: inherit;
+      text-decoration: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .furigana-link:hover { text-decoration: underline; }
 
     .toggle-btn {
       border: 1px solid #dadce0;
@@ -518,6 +525,7 @@ body.range-keypad-open {
       <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
       <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어만큼</button>
       <button class="main-btn" id="btnDialogue" onclick="processWords('dialogue')" style="background-color: #34a853;">대화</button>
+      <button class="main-btn" id="btnCancelGeneration" onclick="cancelGeneration()" style="background-color: #f1f3f4; color: #3c4043;">취소</button>
     </div>
   </div>
 
@@ -863,7 +871,7 @@ body.range-keypad-open {
   });
   window.addEventListener('load', restoreSavedApiKey);
 
-  async function callGeminiAPI(prompt, temperature = 0.85) {
+  async function callGeminiAPI(prompt, temperature = 0.85, signal = null) {
     const apiKey = getApiKey();
     if (!apiKey) {
       alert("상단에 Gemini API 키를 먼저 입력하고 [키 저장]을 눌러주세요.");
@@ -888,7 +896,8 @@ body.range-keypad-open {
           const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            signal
           });
           const json = await res.json();
           if (!json.error) {
@@ -897,9 +906,22 @@ body.range-keypad-open {
           }
           lastErrorMessage = `[${item.name}] ${json.error.message || "API 오류"}`;
         } catch (e) {
+          if (e && e.name === 'AbortError') throw e;
           lastErrorMessage = `[${item.name}] 네트워크 오류: ${e.toString()}`;
         }
-        await new Promise(r => setTimeout(r, 1000));
+        if (signal && signal.aborted) {
+          const abortError = new DOMException('생성 취소', 'AbortError');
+          throw abortError;
+        }
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(resolve, 1000);
+          if (signal) {
+            signal.addEventListener('abort', () => {
+              clearTimeout(timer);
+              reject(new DOMException('생성 취소', 'AbortError'));
+            }, { once: true });
+          }
+        });
       }
     }
     return { error: { message: lastErrorMessage } };
@@ -932,6 +954,8 @@ body.range-keypad-open {
     }
   }
 
+  let generationAbortController = null;
+
   async function processWords(mode) {
     const leftRaw = document.getElementById('inputTextLeft').value.trim();
     const rightRaw = document.getElementById('inputTextRight').value.trim();
@@ -949,7 +973,10 @@ body.range-keypad-open {
     const singleWords = hasLeft ? leftWords : rightWords;
     const pairCount = paired ? leftWords.length : singleWords.length;
     const buttons = [document.getElementById('btnFive'), document.getElementById('btnSentence'), document.getElementById('btnDialogue')];
+    const cancelButton = document.getElementById('btnCancelGeneration');
     buttons.forEach(btn => { if (btn) btn.disabled = true; });
+    if (cancelButton) { cancelButton.disabled = false; cancelButton.textContent = '취소'; }
+    generationAbortController = new AbortController();
 
     let prompt = '', totalSets = 0;
     const commonRules = `
@@ -1005,7 +1032,7 @@ body.range-keypad-open {
     }
 
     try {
-      const json = await callGeminiAPI(prompt, 0.85);
+      const json = await callGeminiAPI(prompt, 0.85, generationAbortController.signal);
       if (!json || json.error) { alert(`⚠️ API 오류 발생:\n${json?.error?.message || '응답을 받지 못했습니다.'}`); return; }
       const badge = document.getElementById('modelBadge'); badge.innerText = `Gemini ${json.usedModel || ''}`; badge.style.display = 'inline-block';
       const generatedText = json?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
@@ -1027,8 +1054,23 @@ body.range-keypad-open {
       if (!examples.length) throw new Error('생성된 내용을 화면 형식으로 변환하지 못했습니다.');
       for (let i=examples.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [examples[i],examples[j]]=[examples[j],examples[i]]; }
       renderExamples(examples, mode);
-    } catch (e) { console.error('예문 처리 오류:',e); alert(`처리 오류: ${e.message || e.toString()}`); }
-    finally { buttons.forEach(btn => { if (btn) btn.disabled = false; }); }
+    } catch (e) {
+      if (e && e.name === 'AbortError') {
+        console.log('예문 생성을 취소했습니다.');
+      } else {
+        console.error('예문 처리 오류:', e);
+        alert(`처리 오류: ${e.message || e.toString()}`);
+      }
+    } finally {
+      buttons.forEach(btn => { if (btn) btn.disabled = false; });
+      if (cancelButton) { cancelButton.disabled = false; cancelButton.textContent = '취소'; }
+      generationAbortController = null;
+    }
+  }
+
+  function cancelGeneration() {
+    if (!generationAbortController) return;
+    generationAbortController.abort();
   }
 
   // HTML에 안전하게 텍스트를 삽입하기 위한 공통 함수.
@@ -1059,25 +1101,24 @@ body.range-keypad-open {
       .replace(/<\/?b>/gi, '')
       .trim();
 
-    // 문장 속 한자+후리가나만 원래 등장 순서대로 표시합니다.
-    // 예: 今度(こんど)の週末(しゅうまつ)に → 今度(こんど) 週末(しゅうまつ)
     const tokens = [];
-    let match;
+    const addToken = (kanji, reading) => {
+      if (!kanji || !reading) return;
+      const href = `https://ja.dict.naver.com/#/search?query=${encodeURIComponent(kanji)}&range=all`;
+      tokens.push(`<a class="furigana-link" href="${href}" target="_blank" rel="noopener noreferrer" title="네이버 일본어 사전에서 검색">${window.escapeHtml(kanji)}</a>(${window.escapeHtml(reading)})`);
+    };
 
-    // 기본 형식: 漢字(ふりがな)
+    let match;
     const plainRegex = /([一-龯々〆ヶ]+)\(([^)\n]+)\)/g;
     while ((match = plainRegex.exec(text)) !== null) {
-      tokens.push(`${match[1]}(${match[2]})`);
+      addToken(match[1], match[2]);
     }
 
-    // 기존 형식도 호환: [漢字](ふりがな), 漢字[ふりがな]
     const bracketRegex = /\[([^\]\n]+)\]\(([^)\n]+)\)|([一-龯々〆ヶ]+)\[([^\]\n]+)\]/g;
     while ((match = bracketRegex.exec(text)) !== null) {
       const kanji = match[1] !== undefined ? match[1] : match[3];
       const reading = match[2] !== undefined ? match[2] : match[4];
-      if (kanji && reading) {
-        tokens.push(`${kanji}(${reading})`);
-      }
+      addToken(kanji, reading);
     }
 
     return tokens.join(' ');
@@ -1103,7 +1144,7 @@ body.range-keypad-open {
         <div class="korean-container">
           <div class="detail-row">
             <button class="toggle-btn" onclick="toggleFurigana(this,'${furiId}')">후</button>
-            <span id="${furiId}" class="korean-text furigana-text">${window.escapeHtml(furiText)}</span>
+            <span id="${furiId}" class="korean-text furigana-text">${furiText}</span>
           </div>
           <div class="detail-row">
             <button class="toggle-btn" onclick="toggleKorean(this,'${korId}')">해</button>
