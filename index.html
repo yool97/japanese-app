@@ -156,24 +156,6 @@
       text-size-adjust: 100% !important;
     }
     
-    /* 스프레드시트와 동일한 3단계 블라인드 표시
-       1단계: 문장 전체 숨김
-       2단계: 대상 부분을 (     )로 표시
-       3단계: 대상 부분까지 표시 */
-    .sentence-body.blind-mode .blind-target .blind-original {
-      display: none !important;
-    }
-    .sentence-body.blind-mode .blind-target::after {
-      content: "(     )";
-      color: inherit;
-      white-space: pre;
-    }
-    .sentence-body.revealed-mode .blind-target .blind-original {
-      display: inline !important;
-    }
-    .sentence-body.revealed-mode .blind-target::after {
-      content: none;
-    }
 
     .number-btn {
       cursor: pointer;
@@ -546,7 +528,7 @@ body.range-keypad-open {
   // iOS 기기 여부 감지
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzgNO8fHlPZu9URCFlR4t8mlQ8aVhutscw01W_vS6IWk91ERojNDV77nhDX5HzApR3fBQ/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxH3JVkpTtUIM4UOXTZcZhw1I_1X8zXGGQ2bwGscPe_BeQh6XZ7oIkr5HpzRWCwbDCyfg/exec';
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
@@ -643,7 +625,6 @@ body.range-keypad-open {
     ).map(el => ({
       id: el.id,
       display: el.style.display || '',
-      blindState: el.dataset.blindState || '0',
       className: el.className
     }));
 
@@ -697,7 +678,6 @@ body.range-keypad-open {
       const el = document.getElementById(item.id);
       if (!el) return;
       el.style.display = item.display || '';
-      el.dataset.blindState = item.blindState || '0';
       el.className = item.className || el.className;
     });
 
@@ -928,13 +908,9 @@ body.range-keypad-open {
   async function fetchGoogleTtsBase64(text) {
     if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes('여기에')) return "";
 
-    // Gemini 응답의 대상 표시와 후리가나는 TTS에 전달하지 않습니다.
-    let cleanText = String(text || "")
-      .replace(/\[\[|\]\]/g, "")
-      .replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, "$1")
-      .replace(/<[^>]*>/g, "")
-      // 앞 단계에서 처리되지 않고 남은 대괄호도 TTS 요청 직전에 제거
-      .replace(/[\[\]]/g, "")
+    // 일본어 문장 자체를 그대로 TTS에 전달합니다.
+    let cleanText = String(text || '')
+      .replace(/<[^>]*>/g, '')
       .trim();
 
     for (const word in dynamicDictionary) {
@@ -954,113 +930,6 @@ body.range-keypad-open {
       console.error("구글 TTS 불러오기 실패:", e);
       return "";
     }
-  }
-
-  /* 일본어 원문과 후리가나를 맞춰 HTML로 변환합니다.
-     [[...]]의 위치는 일본어 원문을 기준으로 잡고,
-     후리가나 줄에는 [[...]]가 없다는 현재 GAS 규칙에 맞춰 같은 위치를
-     후리가나 HTML 안에 정확히 적용합니다. */
-  // 전역 HTML 이스케이프 함수: 결과 렌더링에서도 사용합니다.
-  window.escapeHtml = function(value) {
-    return String(value == null ? '' : value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  };
-
-  function convertToInteractiveRuby(japaneseText, furiganaText, sentenceIndex) {
-    if (!japaneseText) return "";
-
-    const cleanJapanese = japaneseText
-      .replace(/<\/?u>/gi, "")
-      .replace(/<\/?b>/gi, "");
-
-    const markerMatch = cleanJapanese.match(/\[\[([\s\S]*?)\]\]/);
-    const targetWord = markerMatch ? markerMatch[1] : "";
-    const baseJapanese = cleanJapanese
-      .replace(/\[\[|\]\]/g, "")
-      // 앞 단계에서 처리되지 않고 남은 대괄호도 화면 표시 직전에 제거
-      .replace(/[\[\]]/g, "");
-    const targetStart = targetWord ? baseJapanese.indexOf(targetWord) : -1;
-    const targetEnd = targetStart >= 0 ? targetStart + targetWord.length : -1;
-
-    const source = (furiganaText || baseJapanese)
-      .replace(/<\/?u>/gi, "")
-      .replace(/<\/?b>/gi, "");
-
-    const onclickAttr = isIOS
-      ? `onclick="toggleRubyIOS(this, ${sentenceIndex})"`
-      : `onclick="toggleRuby(this)"`;
-
-    // 후리가나 표기를 토큰 단위로 읽습니다.
-    // 각 토큰의 baseTextLength를 이용해 원문의 대상 범위와 정확히 맞춥니다.
-    const tokenRegex = /\[([^\]\n]+)\]\(([^)\n]+)\)|([一-龠々〆ヶ]+)\[([^\]\n]+)\]/g;
-    let html = "";
-    let lastIndex = 0;
-    let basePos = 0;
-
-    let blindOpen = false;
-
-    function setBlindState(overlapsTarget) {
-      if (overlapsTarget && !blindOpen) {
-        html += '<span class="blind-target"><span class="blind-original">';
-        blindOpen = true;
-      } else if (!overlapsTarget && blindOpen) {
-        html += '</span></span>';
-        blindOpen = false;
-      }
-    }
-
-    function appendPart(text, partStart, partEnd) {
-      if (!text) return;
-
-      const overlapsTarget =
-        targetStart >= 0 && partStart < targetEnd && partEnd > targetStart;
-
-      setBlindState(overlapsTarget);
-      html += window.escapeHtml(text);
-    }
-
-    function appendRuby(baseText, reading, partStart, partEnd) {
-      const overlapsTarget =
-        targetStart >= 0 && partStart < targetEnd && partEnd > targetStart;
-      setBlindState(overlapsTarget);
-      html += `<ruby class="interactive-ruby" ${onclickAttr}><rb>${window.escapeHtml(baseText)}</rb><rt class="ruby-text hidden-rt">${window.escapeHtml(reading)}</rt></ruby>`;
-    }
-
-    let match;
-    while ((match = tokenRegex.exec(source)) !== null) {
-      // 후리가나 표기 앞의 일반 문자
-      const plain = source.slice(lastIndex, match.index);
-      if (plain) {
-        appendPart(plain, basePos, basePos + plain.length);
-        basePos += plain.length;
-      }
-
-      const baseText = match[1] !== undefined ? match[1] : match[3];
-      const reading = match[2] !== undefined ? match[2] : match[4];
-      appendRuby(baseText, reading, basePos, basePos + baseText.length);
-      basePos += baseText.length;
-      lastIndex = tokenRegex.lastIndex;
-    }
-
-    // 마지막 일반 문자
-    const tail = source.slice(lastIndex);
-    if (tail) appendPart(tail, basePos, basePos + tail.length);
-
-    if (blindOpen) {
-      html += '</span></span>';
-      blindOpen = false;
-    }
-
-    // 후리가나 형식이 전혀 없는 경우에도 원문을 표시합니다.
-    if (!html) {
-      html = window.escapeHtml(baseJapanese);
-    }
-
-    return html;
   }
 
   async function processWords(mode) {
@@ -1093,21 +962,16 @@ body.range-keypad-open {
 6. 일본어 문장에는 일본어 이외의 문자가 섞이지 않게 하세요.
 
 [후리가나 표기 규칙]:
-- 일본어 문장의 모든 한자에는 후리가나를 붙이세요.
-- 하나의 단어는 전체를 하나의 []로 묶고 발음 전체를 하나의 ()에 적으세요.
-- 예: 正直 → [正直](しょうじき)
-- 예: 伝えます → [伝](つた)えます
-- 후리가나 줄에는 [[...]]를 넣지 마세요.
-
-[대상 부분 지정 규칙]:
-- 일본어 문장의 대상 부분 전체를 [[...]]로 정확히 한 번 감싸세요.
+- 1줄 일본어 문장에는 후리가나를 넣지 마세요.
+- 2줄에는 1줄 일본어 문장 전체의 읽는 법을 대괄호나 소괄호 없이 적으세요.
+- 2줄에는 별도의 표시 기호를 사용하지 마세요.
 `;
 
     if (mode === 'five') {
       totalSets = 5;
       if (paired) {
         const l = leftWords[0], r = rightWords[0];
-        prompt = `다음 V 시트 입력 '${l}'와 W 시트 입력 '${r}'를 모두 자연스럽게 사용하여 서로 다른 맥락의 일본어 예문 5개를 만드세요.\n두 입력은 각각 문장의 핵심이 되도록 사용하고, 대상 표시 [[...]]는 V 시트 입력 '${l}' 부분에 한 번만 붙이세요.`;
+        prompt = `다음 V 시트 입력 '${l}'와 W 시트 입력 '${r}'를 모두 자연스럽게 사용하여 서로 다른 맥락의 일본어 예문 5개를 만드세요.\n두 입력은 각각 문장의 핵심이 되도록 자연스럽게 사용하세요.`;
       } else {
         prompt = `다음 입력 '${singleWords[0]}' 하나를 사용하여 서로 다른 맥락의 자연스러운 일본어 예문 5개를 만드세요.`;
       }
@@ -1116,7 +980,7 @@ body.range-keypad-open {
       if (paired) {
         totalSets = pairCount;
         const pairs = leftWords.map((w,i) => `${i+1}. V: ${w} / W: ${rightWords[i]}`).join('\n');
-        prompt = `다음 V 시트와 W 시트의 단어를 같은 번호끼리 한 쌍으로 묶어 사용하여 총 ${totalSets}개의 자연스러운 일본어 예문을 만드세요.\n각 예문에는 해당 번호의 V 입력과 W 입력을 모두 반드시 자연스럽게 사용하세요.\n대상 부분 [[...]]는 각 문장에서 V 입력을 나타내는 부분에 한 번만 표시하세요.\n입력 목록:\n${pairs}`;
+        prompt = `다음 V 시트와 W 시트의 단어를 같은 번호끼리 한 쌍으로 묶어 사용하여 총 ${totalSets}개의 자연스러운 일본어 예문을 만드세요.\n각 예문에는 해당 번호의 V 입력과 W 입력을 모두 반드시 자연스럽게 사용하세요.\n입력 목록:\n${pairs}`;
       } else {
         const count = singleWords.length;
         if (count === 1) { totalSets = 3; prompt = `다음 1개의 입력 '${singleWords[0]}'를 활용하여 총 3개의 자연스러운 일본어 예문을 만드세요.`; }
@@ -1128,7 +992,7 @@ body.range-keypad-open {
       if (paired) {
         totalSets = pairCount;
         const pairs = leftWords.map((w,i) => `${i+1}. V: ${w} / W: ${rightWords[i]}`).join('\n');
-        prompt = `다음 V/W 입력을 같은 번호끼리 한 쌍으로 사용해 실제 일본어 회화처럼 자연스러운 2인 대화 ${totalSets}세트를 만드세요.\n각 세트에서 해당 번호의 V 입력과 W 입력을 모두 자연스럽게 사용하세요.\n대상 표시 [[...]]는 V 입력을 나타내는 부분에 한 번만 붙이세요.\n입력 목록:\n${pairs}`;
+        prompt = `다음 V/W 입력을 같은 번호끼리 한 쌍으로 사용해 실제 일본어 회화처럼 자연스러운 2인 대화 ${totalSets}세트를 만드세요.\n각 세트에서 해당 번호의 V 입력과 W 입력을 모두 자연스럽게 사용하세요.\n입력 목록:\n${pairs}`;
       } else {
         totalSets = singleWords.length === 1 ? 3 : singleWords.length === 2 ? 4 : singleWords.length;
         prompt = `다음 입력을 활용해 실제 일본어 회화처럼 자연스러운 2인 대화 ${totalSets}세트를 만드세요.\n입력 목록:\n${singleWords.map((w,i)=>`${i+1}. ${w}`).join('\n')}`;
@@ -1146,71 +1010,38 @@ body.range-keypad-open {
       const examples = [];
       if (mode === 'dialogue') {
         for (let i=0; i+7<lines.length; i+=8) {
-          const aJ=lines[i], aF=lines[i+1], aK=lines[i+2], bJ=lines[i+4], bF=lines[i+5], bK=lines[i+6];
           examples.push({dialogue:true, turns:[
-            {japanese:cleanJapaneseDisplay(aJ), japaneseWithMarker:aJ, furigana:aF, rubyHtml:convertToInteractiveRuby(aJ,aF,examples.length*2), korean:aK},
-            {japanese:cleanJapaneseDisplay(bJ), japaneseWithMarker:bJ, furigana:bF, rubyHtml:convertToInteractiveRuby(bJ,bF,examples.length*2+1), korean:bK}
+            {japanese:cleanJapaneseDisplay(lines[i]), furigana:lines[i+1]||'', korean:lines[i+2]||'', naturalKorean:lines[i+3]||''},
+            {japanese:cleanJapaneseDisplay(lines[i+4]), furigana:lines[i+5]||'', korean:lines[i+6]||'', naturalKorean:lines[i+7]||''}
           ]});
         }
       } else {
         for (let i=0; i+3<lines.length; i+=4) {
-          const japaneseWithMarker=lines[i], markerMatch=japaneseWithMarker.match(/\[\[([\s\S]*?)\]\]/);
-          if (!markerMatch) continue;
-          examples.push({japanese:cleanJapaneseDisplay(japaneseWithMarker), japaneseWithMarker, furigana:lines[i+1], rubyHtml:convertToInteractiveRuby(japaneseWithMarker,lines[i+1],i/4), korean:lines[i+2]||'', targetWord:markerMatch[1]});
+          examples.push({japanese:cleanJapaneseDisplay(lines[i]), furigana:lines[i+1]||'', korean:lines[i+2]||'', naturalKorean:lines[i+3]||''});
         }
       }
       if (!examples.length) throw new Error('생성된 내용을 화면 형식으로 변환하지 못했습니다.');
       for (let i=examples.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [examples[i],examples[j]]=[examples[j],examples[i]]; }
-      if (mode === 'dialogue') examples.forEach((item,index)=>item.turns.forEach((turn,t)=>turn.rubyHtml=convertToInteractiveRuby(turn.japaneseWithMarker||turn.japanese,turn.furigana||'',index*2+t)));
-      else examples.forEach((item,index)=>item.rubyHtml=convertToInteractiveRuby(item.japaneseWithMarker||item.japanese,item.furigana||'',index));
       renderExamples(examples, mode);
     } catch (e) { console.error('예문 처리 오류:',e); alert(`처리 오류: ${e.message || e.toString()}`); }
     finally { buttons.forEach(btn => { if (btn) btn.disabled = false; }); }
   }
 
   // 일본어 문장 표시용 공통 정리 함수.
-  // 후리가나 표기가 일본어 원문에 섞여 들어온 경우에도
-  // 화면의 '문장'에는 일본어 원문만 표시하고, 후리가나는 별도의 '후' 버튼에서 표시합니다.
   function cleanJapaneseDisplay(text) {
     return String(text || '')
       .replace(/<\/?u>/gi, '')
       .replace(/<\/?b>/gi, '')
-      .replace(/\[\[|\]\]/g, '')
-      .replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, '$1')
-      .replace(/([一-龠々〆ヶ]+)\[([^\]\n]+)\]/g, '$1')
-      .replace(/([一-龠々〆ヶ]+)\(([^)\n]+)\)/g, '$1')
+      .replace(/[\[\]]/g, '')
       .trim();
   }
 
   function formatFuriganaText(furiganaText) {
-    // "후" 버튼에서는 문장 전체가 아니라 후리가나가 붙은 한자 부분만
-    // 漢字(ふりがな) 漢字(ふりがな) 형식으로 표시합니다.
-    const text = String(furiganaText || '')
+    return String(furiganaText || '')
       .replace(/<\/?u>/gi, '')
       .replace(/<\/?b>/gi, '')
-      .replace(/[\[\]]/g, m => m);
-
-    const tokens = [];
-    const seen = new Set();
-
-    // GAS 출력 형식: [漢字](ふりがな) 또는 漢字[ふりがな]
-    const bracketRegex = /\[([^\]\n]+)\]\(([^)\n]+)\)|([一-龠々〆ヶ]+)\[([^\]\n]+)\]/g;
-    let match;
-    while ((match = bracketRegex.exec(text)) !== null) {
-      const kanji = match[1] !== undefined ? match[1] : match[3];
-      const reading = match[2] !== undefined ? match[2] : match[4];
-      const token = kanji && reading ? `${kanji}(${reading})` : '';
-      if (token && !seen.has(token)) { tokens.push(token); seen.add(token); }
-    }
-
-    // 괄호형 출력이 들어오는 경우도 지원: 漢字(ふりがな)
-    const plainRegex = /([一-龠々〆ヶ]+)\(([^)\n]+)\)/g;
-    while ((match = plainRegex.exec(text)) !== null) {
-      const token = `${match[1]}(${match[2]})`;
-      if (!seen.has(token)) { tokens.push(token); seen.add(token); }
-    }
-
-    return tokens.join(' ');
+      .replace(/[\[\]()]/g, '')
+      .trim();
   }
 
   // 일반 예문/대화문에서 공통으로 사용하는 3줄 표시 구조
@@ -1311,20 +1142,16 @@ body.range-keypad-open {
   }
 
   // 문장 번호 클릭: 1단계 문장 표시 ↔ 2단계 문장 숨김
-  // 대상 단어 블라인드 기능은 모바일에서 사용하지 않습니다.
   function toggleSentence(elementId) {
     const target = document.getElementById(elementId);
     if (!target) return;
 
     const isHidden = target.style.display === 'none' || !target.style.display;
-    target.classList.remove('blind-mode', 'revealed-mode');
 
     if (isHidden) {
       target.style.display = 'inline';
-      target.dataset.blindState = '1';
     } else {
       target.style.display = 'none';
-      target.dataset.blindState = '0';
     }
 
     saveDisplayedSentenceState();
@@ -1341,22 +1168,6 @@ body.range-keypad-open {
     saveDisplayedSentenceState();
   }
 
-  // 비 iOS 기기용 클릭 이벤트
-  function toggleRuby(rubyElem) {
-    const targetRt = rubyElem.querySelector('rt');
-    if (!targetRt) return;
-
-    const wasHidden = targetRt.classList.contains('hidden-rt');
-
-    const allRts = document.querySelectorAll('rt.ruby-text');
-    allRts.forEach(rt => rt.classList.add('hidden-rt'));
-
-    if (wasHidden) {
-      targetRt.classList.remove('hidden-rt');
-    }
-  }
-
-  // iOS 기기 전용 클릭 이벤트 (재생 버튼 상단 표시)
   function toggleRubyIOS(rubyElem, index) {
     const targetRt = rubyElem.querySelector('rt');
     const displayBox = document.getElementById(`ios-furi-${index}`);
