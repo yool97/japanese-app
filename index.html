@@ -1104,7 +1104,7 @@ body.range-keypad-open {
     const tokens = [];
     const addToken = (kanji, reading) => {
       if (!kanji || !reading) return;
-      const href = `https://ja.dict.naver.com/#/search?query=${encodeURIComponent(kanji)}&range=all`;
+      const href = `https://ja.dict.naver.com/#/search?query=${encodeURIComponent(kanji)}`;
       tokens.push(`<a class="furigana-link" href="${href}" target="_blank" rel="noopener noreferrer" title="네이버 일본어 사전에서 검색">${window.escapeHtml(kanji)}</a>(${window.escapeHtml(reading)})`);
     };
 
