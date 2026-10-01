@@ -528,7 +528,7 @@ body.range-keypad-open {
   // iOS 기기 여부 감지
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxH3JVkpTtUIM4UOXTZcZhw1I_1X8zXGGQ2bwGscPe_BeQh6XZ7oIkr5HpzRWCwbDCyfg/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwq59UCtmSK6zqFGbKFbIRZD8CtSbhNWhZjzJtaPxZt1ysHDyL_aXcFbJmwuIkioHhrLA/exec';
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
@@ -1037,11 +1037,36 @@ body.range-keypad-open {
   }
 
   function formatFuriganaText(furiganaText) {
-    return String(furiganaText || '')
+    const text = String(furiganaText || '')
       .replace(/<\/?u>/gi, '')
       .replace(/<\/?b>/gi, '')
-      .replace(/[\[\]()]/g, '')
       .trim();
+
+    // 후리가나 버튼에는 문장 전체를 히라가나로 표시하지 않고,
+    // 후리가나가 붙은 한자 부분만 "漢字(ふりがな)" 형식으로 표시합니다.
+    const tokens = [];
+    const seen = new Set();
+
+    // 기존 GAS 출력 형식도 호환: [漢字](ふりがな), 漢字[ふりがな]
+    const bracketRegex = /\[([^\]\n]+)\]\(([^)\n]+)\)|([一-龠々〆ヶ]+)\[([^\]\n]+)\]/g;
+    let match;
+    while ((match = bracketRegex.exec(text)) !== null) {
+      const kanji = match[1] !== undefined ? match[1] : match[3];
+      const reading = match[2] !== undefined ? match[2] : match[4];
+      if (kanji && reading) {
+        const token = `${kanji}(${reading})`;
+        if (!seen.has(token)) { tokens.push(token); seen.add(token); }
+      }
+    }
+
+    // 현재 출력 형식: 漢字(ふりがな)
+    const plainRegex = /([一-龠々〆ヶ]+)\(([^)\n]+)\)/g;
+    while ((match = plainRegex.exec(text)) !== null) {
+      const token = `${match[1]}(${match[2]})`;
+      if (!seen.has(token)) { tokens.push(token); seen.add(token); }
+    }
+
+    return tokens.join(' ');
   }
 
   // 일반 예문/대화문에서 공통으로 사용하는 3줄 표시 구조
