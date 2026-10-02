@@ -525,6 +525,7 @@ body.range-keypad-open {
       <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
       <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어만큼</button>
       <button class="main-btn" id="btnDialogue" onclick="processWords('dialogue')" style="background-color: #34a853;">대화</button>
+      <button class="main-btn" id="btnLongDialogue" onclick="processWords('longDialogue')" style="background-color: #fbbc04; color: #202124;">긴대화</button>
       <button class="main-btn" id="btnCancelGeneration" onclick="cancelGeneration()" style="background-color: #f1f3f4; color: #3c4043;">취소</button>
     </div>
   </div>
@@ -536,7 +537,7 @@ body.range-keypad-open {
   // iOS 기기 여부 감지
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwShEka3qEZXZlOludjZypPGvCNSEy1wCXWiSWdAf1-OWxVpy5KBMiqeEdEir_9VJZAKA/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwuoJMm0HBxVD_DwcJ-JxnSlsNex30mhw62n3kZZcgnp5tK8kWUTZma5pvh6OpaL_mnCw/exec';
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
@@ -964,15 +965,19 @@ body.range-keypad-open {
     const hasLeft = leftWords.length > 0, hasRight = rightWords.length > 0;
 
     if (!hasLeft && !hasRight) { alert('단어를 입력하거나 V/W 시트에서 불러온 후 실행해 주세요.'); return; }
-    if (hasLeft && hasRight && leftWords.length !== rightWords.length) {
+    if (mode !== 'longDialogue' && hasLeft && hasRight && leftWords.length !== rightWords.length) {
       alert(`V 시트 ${leftWords.length}개와 W 시트 ${rightWords.length}개의 단어 수가 다릅니다.\n두 시트에 단어가 모두 있으면 같은 개수로 맞춰주세요.`);
+      return;
+    }
+    if (mode === 'longDialogue' && !hasRight) {
+      alert('긴대화는 W 시트(C열) 단어가 1개 이상 있어야 합니다.');
       return;
     }
 
     const paired = hasLeft && hasRight;
     const singleWords = hasLeft ? leftWords : rightWords;
     const pairCount = paired ? leftWords.length : singleWords.length;
-    const buttons = [document.getElementById('btnFive'), document.getElementById('btnSentence'), document.getElementById('btnDialogue')];
+    const buttons = [document.getElementById('btnFive'), document.getElementById('btnSentence'), document.getElementById('btnDialogue'), document.getElementById('btnLongDialogue')];
     const cancelButton = document.getElementById('btnCancelGeneration');
     buttons.forEach(btn => { if (btn) btn.disabled = true; });
     if (cancelButton) { cancelButton.disabled = false; cancelButton.textContent = '취소'; }
@@ -1019,6 +1024,28 @@ body.range-keypad-open {
         else { totalSets = count; prompt = `다음 ${count}개의 입력을 각각 1개씩 활용하여 총 ${count}개의 자연스러운 일본어 예문을 만드세요.\n입력 목록:\n${singleWords.map((w,i)=>`${i+1}. ${w}`).join('\n')}`; }
       }
       prompt += `\n각 입력 자체를 문맥에 맞게 자연스럽게 사용하세요.\n${commonRules}\n[출력 형식]\n정확히 ${totalSets*4}줄만 출력하세요. 각 세트는 4줄입니다.\n1줄 일본어 문장\n2줄 후리가나\n3줄 직역에 가까운 한국어\n4줄 자연스러운 한국어\n`;
+    } else if (mode === 'longDialogue') {
+      const cCount = rightWords.length;
+      const minSentences = cCount === 1 ? 2 : cCount === 2 ? 2 : cCount - 1;
+      const maxSentences = cCount === 1 ? 4 : cCount === 2 ? 5 : cCount + 3;
+      totalSets = minSentences + Math.floor(Math.random() * (maxSentences - minSentences + 1));
+      const bText = leftWords.length
+        ? leftWords.map((w,i) => `${i+1}. ${w}`).join('\n')
+        : '(없음)';
+      const cText = rightWords.map((w,i) => `${i+1}. ${w}`).join('\n');
+      prompt = `다음 입력 단어들을 모두 활용하여, 처음부터 끝까지 하나의 상황으로 자연스럽게 이어지는 두 사람의 긴 일본어 대화를 만드세요.\n\n` +
+        `반드시 정확히 ${totalSets}개의 일본어 대사를 만드세요. 한 사람이 여러 번 연속으로 말해도 되지만, 실제 일상 대화처럼 두 사람이 번갈아 자연스럽게 대화하도록 구성하세요.\n\n` +
+        `[W 시트 입력 - C열 핵심 학습 단어]\n${cText}\n\n` +
+        `[V 시트 입력 - B열 함께 자연스럽게 활용할 단어]\n${bText}\n\n` +
+        `[긴대화 작성 규칙 - 매우 중요]\n` +
+        `1. W 시트의 모든 입력을 반드시 대화 전체에서 최소 한 번씩 자연스럽게 사용하세요.\n` +
+        `2. V 시트의 입력도 있는 경우 가능한 한 모두 자연스럽게 사용하세요. 다만 문맥을 해치면서 억지로 넣지 마세요.\n` +
+        `3. 각각의 입력을 한 문장에 하나씩 억지로 배치하지 말고, 실제 대화의 흐름에 맞는 위치에 자유롭게 배치하세요.\n` +
+        `4. 각 문장이 서로 독립된 예문처럼 보이지 않도록 앞 대사의 내용에 이어지는 질문, 대답, 설명, 반응 등으로 연결하세요.\n` +
+        `5. 하나의 상황과 주제를 중심으로 처음부터 끝까지 이어지는 대화로 만드세요.\n` +
+        `6. 일본인이 일상에서 실제로 사용할 법한 쉽고 자연스러운 표현을 사용하세요.\n` +
+        `7. 두 사람이 실제로 대화하는 느낌이 나도록 질문과 대답, 동의, 반응, 추가 질문 등을 자연스럽게 섞으세요.\n` +
+        `${commonRules}\n[출력 형식 - 매우 중요]\n정확히 ${totalSets * 4}줄만 출력하세요. 각 대사는 4줄입니다.\n1줄 일본어 대사\n2줄 후리가나\n3줄 직역에 가까운 한국어\n4줄 자연스러운 한국어\n후리가나는 대괄호나 소괄호 없이 읽는 법 전체를 적으세요.\n대사 사이에 빈 줄을 넣지 마세요.`;
     } else {
       if (paired) {
         totalSets = pairCount;
@@ -1046,6 +1073,12 @@ body.range-keypad-open {
             {japanese:cleanJapaneseDisplay(lines[i+4]), furigana:lines[i+5]||'', korean:lines[i+6]||'', naturalKorean:lines[i+7]||''}
           ]});
         }
+      } else if (mode === 'longDialogue') {
+        const turns = [];
+        for (let i=0; i+3<lines.length; i+=4) {
+          turns.push({japanese:cleanJapaneseDisplay(lines[i]), furigana:lines[i+1]||'', korean:lines[i+2]||'', naturalKorean:lines[i+3]||''});
+        }
+        if (turns.length) examples.push({dialogue:true, turns});
       } else {
         for (let i=0; i+3<lines.length; i+=4) {
           examples.push({japanese:cleanJapaneseDisplay(lines[i]), furigana:lines[i+1]||'', korean:lines[i+2]||'', naturalKorean:lines[i+3]||''});
@@ -1164,10 +1197,10 @@ body.range-keypad-open {
     currentIndex = -1;
     currentVoice = '';
 
-    if (mode === 'dialogue') {
+    if (mode === 'dialogue' || mode === 'longDialogue') {
       container.innerHTML = examples.map((item, index) => `
         <div class="card">
-          <div class="dialogue-title">${index + 1}. 대화</div>
+          <div class="dialogue-title">${index + 1}. ${mode === 'longDialogue' ? '긴대화' : '대화'}</div>
           ${item.turns.map((turn, t) => renderDialogueTurn(turn, index * 2 + t)).join('')}
         </div>
       `).join('');
@@ -1189,7 +1222,7 @@ body.range-keypad-open {
       });
     }
 
-    if (mode === 'dialogue') {
+    if (mode === 'dialogue' || mode === 'longDialogue') {
       examples.forEach((item) => item.turns.forEach((turn, t) => {
         const idx = examples.indexOf(item) * 2 + t;
         exampleJapaneseTexts[idx] = cleanJapaneseDisplay(turn.japanese || '');
