@@ -359,10 +359,10 @@
     .range-save-row button { flex:1; min-width:0; height:54px; padding:9px 8px; border:1px solid #dadce0; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; }
     .range-save-btn { background:#e8f0fe; color:#1a73e8; }
     .range-load-btn { background:#f1f3f4; color:#3c4043; }
-    .tone-selector { display:flex; gap:0; margin:0 0 10px; border:1px solid #1a73e8; border-radius:7px; overflow:hidden; }
-    .tone-segment { flex:1; min-width:0; height:42px; padding:8px 4px; border:0; border-right:1px solid #1a73e8; background:#fff; color:#1a73e8; font-size:13px; font-weight:bold; cursor:pointer; }
+    .tone-selector { display:flex; gap:0; margin:0 0 10px; border:1px solid #93c47d; border-radius:7px; overflow:hidden; }
+    .tone-segment { flex:1; min-width:0; height:42px; padding:8px 4px; border:0; border-right:1px solid #93c47d; background:#fff; color:#38761d; font-size:13px; font-weight:bold; cursor:pointer; }
     .tone-segment:last-child { border-right:0; }
-    .tone-segment.active { background:#1a73e8; color:#fff; }
+    .tone-segment.active { background:#d9ead3; color:#274e13; }
     .tone-segment:focus-visible { outline:2px solid #174ea6; outline-offset:-3px; }
     .range-save-row button:disabled { opacity:.6; cursor:default; }
     @media (max-width: 520px) {
@@ -731,6 +731,13 @@ body.range-keypad-open {
       el.value = String(state[id]);
     });
 
+    // 마지막으로 선택했던 말투도 복원합니다.
+    const savedTone = ['敬語', '丁寧語', 'タメ口'].includes(state.selectedTone)
+      ? state.selectedTone
+      : '敬語';
+    const toneButton = document.querySelector(`.tone-segment[data-tone="${savedTone}"]`);
+    if (toneButton) selectTone(savedTone, toneButton);
+
     // 저장된 값이 있으면 행번호 입력칸을 저장 완료 상태로 표시하지 않고
     // 일반 흰색 상태로 보여줍니다. 서버 저장 여부와 혼동하지 않도록 합니다.
     setRangeInputsStatus('white');
@@ -970,11 +977,16 @@ body.range-keypad-open {
   let generationAbortController = null;
 
   function selectTone(tone, button) {
+    const validTones = ['敬語', '丁寧語', 'タメ口'];
+    const selectedTone = validTones.includes(tone) ? tone : '敬語';
+    const selectedButton = button || document.querySelector(`.tone-segment[data-tone="${selectedTone}"]`);
     document.querySelectorAll('.tone-segment').forEach(segment => {
-      const active = segment === button;
+      const active = segment === selectedButton;
       segment.classList.toggle('active', active);
       segment.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
+    // 말투를 바꿀 때마다 다른 브라우저 상태와 함께 자동 저장합니다.
+    saveBrowserState({ selectedTone });
   }
 
   async function processWords(mode) {
