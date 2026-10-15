@@ -294,7 +294,6 @@
     .sheet-range-row .range-btn:disabled { opacity:.6; cursor:default; }
     .range-save-row { display:flex; gap:8px; margin:0 0 10px; }
     .range-save-row button { flex:1; min-width:0; height:54px; padding:9px 8px; border:1px solid #dadce0; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; }
-    .range-save-row .range-step-btn { flex:0.55; padding:6px 2px; background:#fff; color:#1a73e8; font-size:22px; border-color:#c6dafc; }
     .range-save-btn { background:#e8f0fe; color:#1a73e8; }
     .range-load-btn { background:#f1f3f4; color:#3c4043; }
     .tone-selector { display:flex; gap:0; margin:0 0 10px; border:1px solid #93c47d; border-radius:7px; overflow:hidden; }
@@ -464,8 +463,6 @@ body.range-keypad-open {
     </div>
 
     <div class="range-save-row">
-      <button type="button" class="range-step-btn" id="btnShiftRangesUp" onclick="shiftSharedSheetRanges(1)" aria-label="V/W 시트 행번호 다음 범위로 이동">+</button>
-      <button type="button" class="range-step-btn" id="btnShiftRangesDown" onclick="shiftSharedSheetRanges(-1)" aria-label="V/W 시트 행번호 이전 범위로 이동">−</button>
       <button class="range-load-btn" id="btnLoadRanges" onclick="loadSharedSheetRanges()">행번호 불러오기</button>
       <button class="range-save-btn" id="btnSaveRanges" onclick="saveSharedSheetRanges()">행번호 저장하기</button>
     </div>
@@ -717,53 +714,6 @@ body.range-keypad-open {
   // V/W 시트의 시작행·끝행은 저장하기 버튼을 눌렀을 때만 서버에 저장하고,
   // 불러오기 버튼을 눌렀을 때만 서버에서 가져옵니다.
   // 입력 중에는 서버 통신을 하지 않습니다.
-  // V/W 각각의 입력 범위 길이만큼 시작·끝 행을 함께 이동합니다.
-  // direction: 1 = 다음 범위(+), -1 = 이전 범위(-)
-  function shiftSharedSheetRanges(direction) {
-    const ranges = [
-      { name: 'V', startId: 'vRangeStart', endId: 'vRangeEnd' },
-      { name: 'W', startId: 'wRangeStart', endId: 'wRangeEnd' }
-    ];
-    const updates = [];
-
-    for (const range of ranges) {
-      const startInput = document.getElementById(range.startId);
-      const endInput = document.getElementById(range.endId);
-      const startText = startInput?.value.trim() || '';
-      const endText = endInput?.value.trim() || '';
-
-      // 두 범위가 모두 입력되어 있어야 양쪽을 함께 이동합니다.
-      if (!startText || !endText) {
-        alert('V 시트와 W 시트의 시작 행·끝 행을 모두 입력해주세요.');
-        return;
-      }
-
-      const start = Number(startText);
-      const end = Number(endText);
-      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start) {
-        alert(`${range.name} 시트의 시작 행과 끝 행을 올바르게 입력해주세요.`);
-        return;
-      }
-
-      const length = end - start + 1;
-      const nextStart = start + direction * length;
-      const nextEnd = end + direction * length;
-      if (nextStart < 1 || nextEnd < 1) {
-        alert(`${range.name} 시트의 행 번호는 1보다 작을 수 없습니다.`);
-        return;
-      }
-      updates.push({ startInput, endInput, nextStart, nextEnd });
-    }
-
-    // 검증이 모두 끝난 뒤 네 입력칸을 한꺼번에 갱신합니다.
-    updates.forEach(({ startInput, endInput, nextStart, nextEnd }) => {
-      startInput.value = String(nextStart);
-      endInput.value = String(nextEnd);
-    });
-    setRangeInputsStatus('white');
-    saveBrowserState();
-  }
-
   async function loadSharedSheetRanges() {
     setRangeInputsStatus('white');
     const loadBtn = document.getElementById('btnLoadRanges');
