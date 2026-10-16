@@ -1454,7 +1454,6 @@ ${toneInstruction}
     }
     stopCurrentVoice();
     currentIndex = index; currentVoice = voice;
-    audio.currentTime = 0;
     audio.play().then(() => setVoiceButtonState(index, voice, 'stop')).catch(e => {
       console.error('음성 재생 실패:', e);
       currentIndex = -1; currentVoice = '';
