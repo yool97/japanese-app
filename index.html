@@ -478,7 +478,7 @@ body.range-keypad-open {
 
     <div class="btn-group">
       <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
-      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어 수</button>
+      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어수</button>
       <button class="main-btn" id="btnDialogue" onclick="processWords('dialogue')" style="background-color: #34a853;">대화</button>
       <button class="main-btn" id="btnLongDialogue" onclick="processWords('longDialogue')" style="background-color: #fbbc04; color: #202124;">긴대화</button>
       <button class="main-btn" id="btnCancelGeneration" onclick="cancelGeneration()" style="background-color: #f1f3f4; color: #3c4043;">취소</button>
@@ -490,7 +490,32 @@ body.range-keypad-open {
 
 <script>
   // iOS 기기 여부 감지
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbytyKhaDxfV3ZODbfCYpd4lN1257bXzb7efoBYGdBoWSWw2GnT-GmT54t8HNmZYvrcTwQ/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwwv3_hLzfkVRXNUg7BG5P3Ev_LZZss5Ola9rpHtu0XnnwqgDgoJ27uu993UIHIq_UAwg/exec';
+
+  let promptTemplatesCache = null;
+  async function loadPromptTemplates() {
+    if (promptTemplatesCache) return promptTemplatesCache;
+    try {
+      const response = await fetch(`${GAS_WEB_APP_URL}?prompts=load&t=${Date.now()}`);
+      if (!response.ok) return null;
+      const data = await response.json();
+      if (data && data.templates && Object.keys(data.templates).length) {
+        promptTemplatesCache = data.templates;
+        return promptTemplatesCache;
+      }
+    } catch (e) {
+      console.warn('prompt 시트 불러오기 실패', e);
+    }
+    return null;
+  }
+
+  function fillPromptTemplate(template, replacements) {
+    let result = String(template || '');
+    Object.entries(replacements || {}).forEach(([key, value]) => {
+      result = result.split(`{{${key}}}`).join(String(value ?? ''));
+    });
+    return result.replace(/\{\{[^}]+\}\}/g, '');
+  }
 
   let dynamicDictionary = {
     '来させ': 'こさせ', '犬の': 'いぬの', '犬が': 'いぬが', 'に通って': 'にかよって',
@@ -1048,89 +1073,61 @@ body.range-keypad-open {
     if (cancelButton) { cancelButton.disabled = false; cancelButton.textContent = '취소'; }
     generationAbortController = new AbortController();
 
-    let prompt = '', totalSets = 0;
+    let totalSets = 0;
     const selectedTone = document.querySelector('.tone-segment.active')?.dataset.tone || '敬語';
-    const toneInstruction = {
-      '敬語': '[선택한 말투: 敬語] 상대방을 높이거나 자신을 낮추는 존경어·겸양어를 상황에 맞게 사용하세요. 단순한 です／ます체만 반복하지 말고 敬語의 특징이 실제로 드러나게 하세요.',
-      '丁寧語': '[선택한 말투: 丁寧語] 일상에서 쓰는 정중한 です／ます체를 기본으로 하세요. 반말(タメ口)은 사용하지 말고 존경어·겸양어를 과도하게 사용하지 마세요.',
-      'タメ口': '[선택한 말투: タメ口] 친구나 가족처럼 친한 사이에서 쓰는 자연스러운 반말을 사용하세요. です／ます체나 과도하게 격식 있는 존경어·겸양어는 사용하지 마세요.'
-    }[selectedTone];
-    const commonRules = `
-${toneInstruction}
-
-[예문 작성 규칙 - 매우 중요]:
-1. 문장의 시작 부분이나 어조가 서로 중복되거나 비슷하지 않게 다양화하세요.
-2. 기초적인 단어들로 이루어진, 쉬우면서 실생활에서 자주 쓰이는 완성도 높은 일본어를 만드세요.
-3. 한자는 현대 일본인이 실생활에서 두루 사용하는 표준 상용한자 위주로 쓰세요.
-4. TTS가 읽을 때 혼동하기 쉬운 한자는 가급적 히라가나 또는 숫자를 명확히 사용하세요.
-5. 위에서 지정한 말투를 모든 일본어 대사와 문장에 일관되게 적용하세요.
-6. 일본어 문장에는 일본어 이외의 문자가 섞이지 않게 하세요.
-
-[후리가나 표기 규칙]:
-- 1줄 일본어 문장에는 후리가나를 넣지 마세요.
-- 2줄에는 1줄 일본어 문장에서 한자가 있는 부분만 "漢字(ふりがな)" 형식으로 표시하세요.
-- 한자가 없는 히라가나/가타카나/숫자/기호 등은 2줄에서 표시하지 마세요.
-- 예: 今度(こんど)の週末(しゅうまつ)に会いましょう。 → 今度(こんど) 週末(しゅうまつ)
-- 한자가 연속된 하나의 단어는 하나로 묶으세요.
-- 활용어는 한자 부분만 묶고 히라가나 활용 부분은 제외하세요.
-- 2줄에는 위의 괄호 외에 별도의 표시 기호를 사용하지 마세요.
-`;
 
     if (mode === 'five') {
       totalSets = 5;
-      if (paired) {
-        const l = leftWords[0], r = rightWords[0];
-        prompt = `다음 V 시트 입력 '${l}'와 W 시트 입력 '${r}'를 모두 자연스럽게 사용하여 서로 다른 맥락의 일본어 예문 5개를 만드세요.\n두 입력은 각각 문장의 핵심이 되도록 자연스럽게 사용하세요.`;
-      } else {
-        prompt = `다음 입력 '${singleWords[0]}' 하나를 사용하여 서로 다른 맥락의 자연스러운 일본어 예문 5개를 만드세요.`;
-      }
-      prompt += `\n입력 자체를 문맥에 맞게 자연스럽게 사용하세요.\n${commonRules}\n[출력 형식]\n정확히 25줄만 출력하세요. 각 세트는 5줄입니다.\n1줄 일본어 문장(화면 표시용)\n2줄 후리가나\n3줄 직역에 가까운 한국어\n4줄 자연스러운 한국어\n5줄 끊어읽기용 일본어 문장(1줄을 바탕으로 의미가 자연스럽게 끊기는 구절·절의 경계나, 천천히 말할 때 끊어읽을 법한 곳에 쉼표「、」를 추가)\n`;
     } else if (mode === 'sentence') {
-      if (paired) {
-        totalSets = pairCount;
-        const pairs = leftWords.map((w,i) => `${i+1}. V: ${w} / W: ${rightWords[i]}`).join('\n');
-        prompt = `다음 V 시트와 W 시트의 단어를 같은 번호끼리 한 쌍으로 묶어 사용하여 총 ${totalSets}개의 자연스러운 일본어 예문을 만드세요.\n각 예문에는 해당 번호의 V 입력과 W 입력을 모두 반드시 자연스럽게 사용하세요.\n입력 목록:\n${pairs}`;
-      } else {
-        const count = singleWords.length;
-        if (count === 1) { totalSets = 3; prompt = `다음 1개의 입력 '${singleWords[0]}'를 활용하여 총 3개의 자연스러운 일본어 예문을 만드세요.`; }
-        else if (count === 2) { totalSets = 4; prompt = `다음 2개의 입력 '${singleWords[0]}'와 '${singleWords[1]}'를 각각 2개씩 활용하여 총 4개의 자연스러운 일본어 예문을 만드세요.`; }
-        else { totalSets = count; prompt = `다음 ${count}개의 입력을 각각 1개씩 활용하여 총 ${count}개의 자연스러운 일본어 예문을 만드세요.\n입력 목록:\n${singleWords.map((w,i)=>`${i+1}. ${w}`).join('\n')}`; }
-      }
-      prompt += `\n각 입력 자체를 문맥에 맞게 자연스럽게 사용하세요.\n${commonRules}\n[출력 형식]\n정확히 ${totalSets*5}줄만 출력하세요. 각 세트는 5줄입니다.\n1줄 일본어 문장(화면 표시용)\n2줄 후리가나\n3줄 직역에 가까운 한국어\n4줄 자연스러운 한국어\n5줄 끊어읽기용 일본어 문장(1줄을 바탕으로 의미가 자연스럽게 끊기는 구절·절의 경계나, 천천히 말할 때 끊어읽을 법한 곳에 쉼표「、」를 추가. 단어와 의미는 바꾸지 마세요)\n`;
+      totalSets = paired ? pairCount : (singleWords.length === 1 ? 3 : singleWords.length === 2 ? 4 : singleWords.length);
     } else if (mode === 'longDialogue') {
       const cCount = rightWords.length;
       const minSentences = cCount === 1 ? 2 : cCount === 2 ? 2 : cCount - 1;
       const maxSentences = cCount === 1 ? 4 : cCount === 2 ? 5 : cCount + 3;
       totalSets = minSentences + Math.floor(Math.random() * (maxSentences - minSentences + 1));
-      const bText = leftWords.length
-        ? leftWords.map((w,i) => `${i+1}. ${w}`).join('\n')
-        : '(없음)';
-      const cText = rightWords.map((w,i) => `${i+1}. ${w}`).join('\n');
-      prompt = `다음 입력 단어들을 모두 활용하여, 처음부터 끝까지 하나의 상황으로 자연스럽게 이어지는 두 사람의 긴 일본어 대화를 만드세요.\n\n` +
-        `반드시 정확히 ${totalSets}개의 일본어 대사를 만드세요. 한 사람이 여러 번 연속으로 말해도 되지만, 실제 일상 대화처럼 두 사람이 번갈아 자연스럽게 대화하도록 구성하세요.\n\n` +
-        `[W 시트 입력 - C열 핵심 학습 단어]\n${cText}\n\n` +
-        `[V 시트 입력 - B열 함께 자연스럽게 활용할 단어]\n${bText}\n\n` +
-        `[긴대화 작성 규칙 - 매우 중요]\n` +
-        `1. W 시트의 모든 입력을 반드시 대화 전체에서 최소 한 번씩 자연스럽게 사용하세요.\n` +
-        `2. V 시트의 입력도 있는 경우 가능한 한 모두 자연스럽게 사용하세요. 다만 문맥을 해치면서 억지로 넣지 마세요.\n` +
-        `3. 각각의 입력을 한 문장에 하나씩 억지로 배치하지 말고, 실제 대화의 흐름에 맞는 위치에 자유롭게 배치하세요.\n` +
-        `4. 각 문장이 서로 독립된 예문처럼 보이지 않도록 앞 대사의 내용에 이어지는 질문, 대답, 설명, 반응 등으로 연결하세요.\n` +
-        `5. 하나의 상황과 주제를 중심으로 처음부터 끝까지 이어지는 대화로 만드세요.\n` +
-        `6. 일본인이 일상에서 실제로 사용할 법한 아주 쉽고 자연스러운 표현을 사용하세요.\n` +
-        `7. 두 사람이 실제로 대화하는 느낌이 나도록 질문과 대답, 동의, 반응, 추가 질문 등을 자연스럽게 섞으세요.\n` +
-        `${commonRules}\n[출력 형식 - 매우 중요]\n정확히 ${totalSets * 5}줄만 출력하세요. 각 대사는 5줄입니다.\n1줄 일본어 대사(화면 표시용)\n2줄 후리가나\n3줄 직역에 가까운 한국어\n4줄 자연스러운 한국어\n5줄 끊어읽기용 일본어 대사(의미가 자연스럽게 끊기는 구절·절의 경계나, 천천히 말할 때 끊어읽을 법한 곳에 쉼표「、」를 추가한 버전.)\n후리가나는 대괄호나 소괄호 없이 읽는 법 전체를 적으세요.\n대사 사이에 빈 줄을 넣지 마세요.`;
     } else {
-      if (paired) {
-        totalSets = pairCount;
-        const pairs = leftWords.map((w,i) => `${i+1}. V: ${w} / W: ${rightWords[i]}`).join('\n');
-        prompt = `다음 V/W 입력을 같은 번호끼리 한 쌍으로 사용해 실제 일본어 회화처럼 자연스러운 2인 대화 ${totalSets}세트를 만드세요.\n각 세트에서 해당 번호의 V 입력과 W 입력을 모두 자연스럽게 사용하세요.\n입력 목록:\n${pairs}`;
-      } else {
-        totalSets = singleWords.length === 1 ? 3 : singleWords.length === 2 ? 4 : singleWords.length;
-        prompt = `다음 입력을 활용해 실제 일본어 회화처럼 자연스러운 2인 대화 ${totalSets}세트를 만드세요.\n입력 목록:\n${singleWords.map((w,i)=>`${i+1}. ${w}`).join('\n')}`;
-      }
-      prompt += `\n각 세트는 서로 다른 상황과 표현을 사용하세요. 각 세트에는 두 사람이 한 번씩 말하는 2개의 일본어 대사가 있어야 합니다. 입력된 표현은 대화의 핵심이 되도록 자연스럽게 사용하세요.\n${commonRules}\n[대화 출력 형식 - 매우 중요]\n정확히 ${totalSets*10}줄만 출력하세요. 각 세트는 10줄입니다.\n1줄 첫 번째 사람의 일본어 대사\n2줄 첫 번째 대사의 후리가나\n3줄 첫 번째 대사의 직역에 가까운 한국어\n4줄 첫 번째 대사의 자연스러운 한국어\n5줄 첫 번째 대사의 끊어읽기용 문장(의미가 자연스럽게 끊기는 구절·절의 경계나, 천천히 말할 때 끊어읽을 법한 곳에 쉼표「、」를 추가)\n6줄 두 번째 사람의 일본어 대사\n7줄 두 번째 대사의 후리가나\n8줄 두 번째 대사의 직역에 가까운 한국어\n9줄 두 번째 대사의 자연스러운 한국어\n10줄 두 번째 대사의 끊어읽기용 문장(의미가 자연스럽게 끊기는 구절·절의 경계나, 천천히 말할 때 끊어읽을 법한 곳에 쉼표「、」를 추가)\n`;
+      totalSets = paired ? pairCount : (singleWords.length === 1 ? 3 : singleWords.length === 2 ? 4 : singleWords.length);
     }
 
+    const promptTemplates = await loadPromptTemplates();
+    const templateNameByMode = {
+      five: '예문 5개 생성',
+      sentence: '지정 개수 예문 생성',
+      dialogue: '여러 세트 대화 생성',
+      longDialogue: '긴 대화 생성'
+    };
+    const templateName = templateNameByMode[mode];
+    if (!promptTemplates || !promptTemplates[templateName] || !promptTemplates['공통 규칙']) {
+      alert("프롬프트가 입력되지 않았습니다. 스프레드시트의 'prompt' 시트 A열(프롬프트 이름)과 B열(프롬프트 내용)에 해당 프롬프트와 '공통 규칙'을 입력해 주세요.");
+      buttons.forEach(btn => { if (btn) btn.disabled = false; });
+      if (cancelButton) { cancelButton.disabled = false; cancelButton.textContent = '취소'; }
+      generationAbortController = null;
+      return;
+    }
+
+    const inputConditions = paired
+      ? leftWords.map((word, i) => `${i + 1}. V: ${word} / W: ${rightWords[i]}`).join('\n')
+      : singleWords.map((word, i) => `${i + 1}. ${word}`).join('\n');
+    const toneRule = `선택한 말투는 ${selectedTone}입니다.`;
+    let replacements = {};
+    if (mode === 'five') {
+      replacements = {
+        INPUT_WORDS: paired
+          ? `V 시트 입력: ${leftWords[0]}\nW 시트 입력: ${rightWords[0]}`
+          : inputConditions
+      };
+    } else if (mode === 'sentence') {
+      replacements = { INPUT_CONDITIONS: inputConditions, TOTAL_SENTENCES: totalSets };
+    } else if (mode === 'dialogue') {
+      replacements = { INPUT_CONDITIONS: inputConditions, TOTAL_SETS: totalSets };
+    } else {
+      replacements = {
+        W_WORDS: rightWords.map((word, i) => `${i + 1}. ${word}`).join('\n'),
+        V_WORDS: leftWords.length ? leftWords.map((word, i) => `${i + 1}. ${word}`).join('\n') : '(없음)',
+        TOTAL_TURNS: totalSets
+      };
+    }
+    let prompt = `${fillPromptTemplate(promptTemplates[templateName], replacements)}\n\n${promptTemplates['공통 규칙']}\n\n${toneRule}`;
     try {
       const json = await callGeminiAPI(prompt, 0.85, generationAbortController.signal);
       if (!json || json.error) { alert(`⚠️ API 오류 발생:\n${json?.error?.message || '응답을 받지 못했습니다.'}`); return; }
