@@ -478,7 +478,7 @@ body.range-keypad-open {
 
     <div class="btn-group">
       <button class="main-btn" id="btnFive" onclick="processWords('five')">5문장</button>
-      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어수</button>
+      <button class="main-btn" id="btnSentence" onclick="processWords('sentence')">단어 수</button>
       <button class="main-btn" id="btnDialogue" onclick="processWords('dialogue')" style="background-color: #34a853;">대화</button>
       <button class="main-btn" id="btnLongDialogue" onclick="processWords('longDialogue')" style="background-color: #fbbc04; color: #202124;">긴대화</button>
       <button class="main-btn" id="btnCancelGeneration" onclick="cancelGeneration()" style="background-color: #f1f3f4; color: #3c4043;">취소</button>
@@ -490,7 +490,7 @@ body.range-keypad-open {
 
 <script>
   // iOS 기기 여부 감지
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwwv3_hLzfkVRXNUg7BG5P3Ev_LZZss5Ola9rpHtu0XnnwqgDgoJ27uu993UIHIq_UAwg/exec';
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzTXCrtoVkeYT7S-zweiKTCT17Mu6RnF3p_9528zg7STt4SEfv_sYAM59swjrxR90EJDA/exec';
 
   let promptTemplatesCache = null;
   async function loadPromptTemplates() {
