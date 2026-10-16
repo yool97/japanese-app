@@ -1382,7 +1382,7 @@ ${toneInstruction}
     if (state === 'loading') { btn.disabled = true; btn.textContent = '⏳ 로딩'; }
     else if (state === 'request') btn.textContent = prefix + ' 요청';
     else if (state === 'play') btn.textContent = prefix + '▶️ 재생';
-    else if (state === 'stop') { btn.textContent = prefix + '⏸️ 정지'; btn.classList.add('playing'); }
+    else if (state === 'pause') { btn.textContent = prefix + '⏸️ 정지'; btn.classList.add('playing'); }
     else if (state === 'failed') { btn.textContent = prefix + '🔃 실패'; btn.classList.add('failed'); }
   }
 
